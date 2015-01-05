@@ -18,6 +18,9 @@ class Elt
 		this.children = children;
 	}
 
+	inline public static function elt(tag,?props,?children):Elt
+		return new Elt(tag,props,children);
+
 	public function toString()
 	{
 		var ret = new StringBuf();

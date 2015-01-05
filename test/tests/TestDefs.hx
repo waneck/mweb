@@ -2,13 +2,14 @@ package tests;
 import utest.Assert;
 import utest.Assert.*;
 
-class TestRoutes
+class TestDefs
 {
 	public function new()
 	{
 	}
 
-	public function testSimpleRoute()
+	public function testDefReading()
 	{
 	}
 }
+

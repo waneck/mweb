@@ -8,6 +8,8 @@ class TestAll
 		var runner = new Runner();
 
 		// runner.addCase(new McliTests());
+		var r = mweb.Route.route({ a: 1, b: 2 });
+		trace(r);
 		Report.create(runner);
 
 		var r:TestResult = null;
