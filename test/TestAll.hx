@@ -1,5 +1,6 @@
 import utest.*;
 import utest.ui.Report;
+import tests.*;
 
 class TestAll
 {
@@ -7,9 +8,7 @@ class TestAll
 	{
 		var runner = new Runner();
 
-		// runner.addCase(new McliTests());
-		var r = mweb.Route.route({ a: 1, b: 2 });
-		trace(r);
+		runner.addCase(new TestDefs());
 		Report.create(runner);
 
 		var r:TestResult = null;

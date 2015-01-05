@@ -1,13 +1,14 @@
 package mweb.internal;
 import mweb.internal.Data;
 
-class AnonDef extends Def
+@:skip @:final class AnonRoute extends mweb.Route
 {
 	var subject:{};
 	var route:DispatchData;
 
 	public function new(subject:{}, route:DispatchData)
 	{
+		super();
 		this.subject = subject;
 		this.route = route;
 	}

@@ -5,45 +5,30 @@ import haxe.macro.Expr;
 import haxe.macro.Type;
 import mweb.internal.Data;
 
+using Lambda;
+
 class Build
 {
+	public static var firstCompilation = false;
+	public static var addedRtti = false;
+
 	public static function build():Array<Field>
 	{
 		var fields = getBuildFields();
-		var anonf = [];
-		for (f in fields)
+		if (fields.exists(function(f) return f.name == '_getDispatchData'))
 		{
-			var expr = switch(f.kind)
-			{
-				case FVar( t, e ) | FProp( _, _, t, e ):
-					if (e == null)
-						e = macro null;
-					if (t != null)
-						e = { expr:ECheckType(e,t), pos:f.pos };
-					e;
-				case FFun( fn ):
-					{ expr: EFunction(null,fn), pos: f.pos };
-			}
-
-			if (f.meta != null)
-			{
-				var i = f.meta.length;
-				while (i --> 0)
-				{
-					var meta = f.meta[i];
-					expr = { expr: EMeta(meta, expr), pos: f.pos };
-				}
-			}
-
-			anonf.push({ field: f.name, expr: expr });
+			if (!getLocalClass().get().meta.has(':skip'))
+				warning('This class already has a _getDispatchData definition; It is however not marked with the @:skip metadata',currentPos());
+			return null;
 		}
 
-		var pos = currentPos(),
-		    ret = dispatchData( { expr:EObjectDecl(anonf), pos:pos } );
+		var pos = currentPos();
+		var clname = Context.getLocalClass().get().name;
+
 		fields.push({
 			name: '_dispatchDataCache',
 			access: [AStatic],
-			kind: FProp('default','null', macro : mweb.internal.Data.DispatchData, makeExpr( ret, pos )),
+			kind: FProp('default','null', macro : mweb.internal.Data.DispatchData, macro mweb.Route._dispatchDataFromMeta($i{clname})),
 			pos: pos
 		});
 		fields.push({
@@ -57,29 +42,44 @@ class Build
 			pos: pos,
 		});
 
+		if( addedRtti ) return fields;
+		addedRtti = true;
+		if( firstCompilation ) {
+			firstCompilation = false;
+			Context.onMacroContextReused(function() {
+				addedRtti = false;
+				// GLOBAL = null;
+				return true;
+			});
+		}
+
+		Context.getModule("mweb.internal.Data");
+		var route = Context.getType('mweb.Route');
+
+		Context.onGenerate(function(types) {
+			for( t in types )
+				switch( t ) {
+				case TInst(c, _) if (unify(route, t) && c.toString() != 'mweb.Route'):
+					trace('here',c);
+					var c = c.get();
+					if (!c.meta.has(':skip') && !c.meta.has('routeRtti'))
+					{
+						var s = new haxe.Serializer();
+						s.useEnumIndex = true;
+						s.useCache = true;
+						var data = dispatchDataType(t,c.meta.get(),c.pos);
+						s.serialize(data);
+						c.meta.add("routeRtti", [ { expr : EConst(CString(s.toString())), pos : c.pos } ], c.pos);
+					}
+				default:
+				}
+		});
+		Context.registerModuleReuseCall("mweb.Route", "mweb.internal.Build.build()");
 		return fields;
 	}
 
-	public static function dispatchData(anon:Expr):DispatchData
+	private static function dispatchDataType(atype:Type, metas:Array<MetadataEntry>, pos:Position):DispatchData
 	{
-		var metas = [];
-		while (true)
-		{
-			switch(anon.expr)
-			{
-				case EMeta(m,e):
-					metas.push(m);
-					anon = e;
-				case EParenthesis(e):
-					anon = e;
-				case _:
-					break;
-			}
-		}
-
-		var pos = anon.pos,
-		    atype = typeof(anon);
-
 		var fields = null;
 		switch (follow(atype))
 		{
@@ -88,11 +88,71 @@ class Build
 			case TInst(inst,_):
 				fields = inst.get().fields.get();
 			case t = TFun(args,ret):
-				return RouteVar(getRoutesDef(t,metas));
+				return RouteFunc(getRoutesDef(t,metas,pos));
 			case _:
 				throw new Error('The type $atype cannot be transformed into a Route', pos);
 		}
-		return null;
+
+		var routes = [];
+		for (field in fields)
+		{
+			var metas = field.meta.get();
+			if (!field.isPublic || metas.exists(function(m) return m.name == ':skip'))
+				continue;
+
+			var type = dispatchDataType(field.type,metas,field.pos);
+			var nameverb = splitVerb(field.name,metas,type,field.pos);
+
+			routes.push({ key:nameverb.name, verb:nameverb.verb, data:type, name:field.name });
+		}
+
+		return RouteObj({ routes: ArrayMap.fromArray(routes) });
+	}
+
+	public static function dispatchData(anon:Expr):DispatchData
+	{
+		var metas = null;
+		inline function updMetas(expr:Expr)
+		{
+			metas = [];
+			while (true)
+			{
+				switch(expr.expr)
+				{
+					case EMeta(m,e):
+						metas.push(m);
+						expr = e;
+					case EParenthesis(e):
+						expr = e;
+					case _:
+						break;
+				}
+			}
+			return expr;
+		}
+
+		anon = updMetas(anon);
+		var anonMetas = metas;
+
+		switch(anon.expr)
+		{
+			case EObjectDecl(fields):
+				var routes = [];
+				for (field in fields)
+				{
+					updMetas(field.expr);
+					if (metas.exists(function(m) return m.name == ':skip'))
+						continue;
+					var type = dispatchData(field.expr);
+					var nameverb = splitVerb(field.field,metas,type,field.expr.pos);
+
+					routes.push({ key:nameverb.name, verb:nameverb.verb, data:type, name:field.field });
+				}
+				return RouteObj({ routes: ArrayMap.fromArray(routes) });
+			case _:
+				var t = typeof(anon);
+				return dispatchDataType(t,anonMetas,anon.pos);
+		}
 	}
 
 	private static function getRoutesDef(t:Type, metas:Array<MetadataEntry>, pos:Position):RoutesDef
@@ -114,19 +174,22 @@ class Build
 							switch(follow(arg.t))
 							{
 								case TAnonymous(anon):
-									var map = new Map();
+									var map = [];
 									for (field in anon.get().fields)
 									{
-										map[field.name] = ctype(field.type, pos, field.name);
+										map.push({ key:field.name, type:ctype(field.type, pos, field.name) });
 									}
-									argdef = { opt: arg.opt, data: map };
+									argdef = { opt: arg.opt, data: ArrayMap.fromArray(map) };
 								case _:
 									throw new Error('The type of the special argument "args" must be an anonymous type',pos);
 							}
 						case _:
-							addr.push({ name:arg.name, type: typeName(arg.t, pos) });
+							addr.push({ key:arg.name, type: typeName(arg.t, pos) });
 					}
 				}
+				return { metas: [ for (m in metas) m.name ], addrArgs: ArrayMap.fromArray(addr), args: argdef };
+			case _:
+				throw new Error('(internal assert) The type $t is not a function', pos);
 		}
 		return null;
 	}
@@ -136,7 +199,7 @@ class Build
 		return switch(follow(t))
 		{
 			case TAnonymous(anon):
-				AnonType([ for (field in anon.get().fields) field.name => ctype(field.type, pos, field.name) ]);
+				AnonType(ArrayMap.fromArray([ for (field in anon.get().fields) { key:field.name, type:ctype(field.type, pos, field.name) }]));
 			case t = TInst(_,_), t = TEnum(_,_), t = TAbstract(_,_):
 				TypeName(typeName(t,pos));
 			case _:
@@ -157,5 +220,55 @@ class Build
 			case _:
 				throw new Error('Type ${follow(t)} is not supported as an address argument',pos);
 		}
+	}
+
+	private static function splitVerb(str:String, meta:Array<MetadataEntry>, type:DispatchData, pos:Position):{ name:String, verb:String }
+	{
+		var name = null,
+		    verb = null;
+
+		for (meta in meta)
+		{
+			switch [meta.name, meta.params]
+			{
+				case [ (':route' | 'route'), [{ expr:EConst(CString(s)) }] ]:
+					name = s;
+				case [ (':verb' | 'verb'), [{ expr:EConst(CString(s)) }] ]:
+					verb = s;
+				case _:
+			}
+		}
+
+		switch(type)
+		{
+			case RouteFunc(_):
+				for (i in 1...str.length)
+				{
+					var code = str.charCodeAt(i);
+					if (code >= 'A'.code && code <= 'Z'.code || i == (str.length - 1))
+					{
+						var isLast = !(code >= 'A'.code && code <= 'Z'.code);
+						var v = isLast ? str : str.substr(0,i);
+						switch(v)
+						{
+							case 'get' | 'post' | 'delete' | 'patch' | 'put' | 'any':
+								// valid verb
+							case _:
+								if (name == null) name = str;
+								break;
+						}
+						if (name == null)
+							name = str.charAt(i).toLowerCase() + str.substr(i+1);
+						verb = v;
+					}
+				}
+			case _:
+				if (verb == null) verb = 'any';
+				name = str;
+		}
+
+		if (name == null || verb == null)
+			throw new Error('The route name "$str" doesn\'t start with the verb filter or the special "any" name. If it is not a route, use the metadata @:skip or make the function private to avoid this error.', pos);
+		return { name:name, verb:verb };
 	}
 }

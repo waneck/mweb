@@ -2,20 +2,20 @@ package mweb.internal;
 
 typedef RouteObjData =
 {
-	routes: Map<String, RoutesDef>,
+	routes: ArrayMap<{ key:String, verb:String, name:String, data:DispatchData }>,
 }
 
 typedef RoutesDef =
 {
 	metas: Array<String>,
-	addrArgs: Array<{ name:String, type:TypeName }>,
-	args: Null<{ opt:Bool, data:Map<String,CType> }>,
+	addrArgs: ArrayMap<{ key:String, type:TypeName }>,
+	args: Null<{ opt:Bool, data:ArrayMap<{ key:String, type:CType }> }>,
 }
 
 enum CType
 {
 	TypeName(name:TypeName);
-	AnonType(names:Map<String,CType>);
+	AnonType(names:ArrayMap<{ key:String, type: CType }>);
 }
 
 typedef TypeName = String;
@@ -23,5 +23,6 @@ typedef TypeName = String;
 enum DispatchData
 {
 	RouteObj(data:RouteObjData);
-	RouteVar(def:RoutesDef);
+	RouteFunc(def:RoutesDef);
+	RouteCall;
 }
