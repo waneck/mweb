@@ -4,7 +4,7 @@ import mweb.internal.Data;
 
 @:autoBuild(mweb.internal.Build.build())
 @:allow(mweb.Dispatcher)
-class Route
+class Route<T>
 {
 	public function new()
 	{
@@ -29,10 +29,10 @@ class Route
 		return haxe.Unserializer.run(data);
 	}
 
-	macro public static function route(anon:haxe.macro.Expr.ExprOf<Dynamic>) : haxe.macro.Expr.ExprOf<Route>
+	macro public static function route(anon:haxe.macro.Expr.ExprOf<Dynamic>) : haxe.macro.Expr.ExprOf<Route<Dynamic>>
 	{
 		var pos = anon.pos;
 		var expr = haxe.macro.Context.makeExpr( mweb.internal.Build.dispatchData(anon), pos );
-		return macro new mweb.internal.AnonRoute($anon, untyped $expr);
+		return macro new mweb.internal.AnonRoute($anon, $expr);
 	}
 }

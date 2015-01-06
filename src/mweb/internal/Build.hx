@@ -6,6 +6,7 @@ import haxe.macro.Type;
 import mweb.internal.Data;
 
 using Lambda;
+using haxe.macro.TypeTools;
 
 class Build
 {
@@ -54,7 +55,7 @@ class Build
 		}
 
 		Context.getModule("mweb.internal.Data");
-		var route = Context.getType('mweb.Route');
+		var route = typeof( macro (null : mweb.Route<Dynamic>) );
 
 		Context.onGenerate(function(types) {
 			for( t in types )
@@ -85,7 +86,7 @@ class Build
 			case TAnonymous(anon):
 				fields = anon.get().fields;
 			case t = TInst(inst,_):
-				if ( !toplevel && unify(t, getType('mweb.Route')) )
+				if ( !toplevel && unify(t, typeof(macro (null : mweb.Route<Dynamic>))) )
 					return RouteCall;
 				fields = inst.get().fields.get();
 			case t = TFun(args,ret):

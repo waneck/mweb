@@ -1,7 +1,7 @@
 package mweb.internal;
 import mweb.internal.Data;
 
-@:skip @:final class AnonRoute extends mweb.Route
+@:skip @:final class AnonRoute<T> extends mweb.Route<T>
 {
 	var subject:{};
 	var route:DispatchData;

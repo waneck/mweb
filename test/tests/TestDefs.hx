@@ -365,7 +365,7 @@ abstract SomeAbstract(String)
 {
 }
 
-private class RouteDefInference extends mweb.Route
+private class RouteDefInference extends mweb.Route<Void>
 {
 	public function postSomething(?args)
 	{
@@ -383,7 +383,7 @@ private class RouteDefInference extends mweb.Route
 	}
 }
 
-private class RouteDef1 extends mweb.Route
+private class RouteDef1 extends mweb.Route<Void>
 {
 	public function any()
 	{
