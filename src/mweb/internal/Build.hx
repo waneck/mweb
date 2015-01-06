@@ -187,7 +187,7 @@ class Build
 							addr.push({ key:arg.name, type: typeName(arg.t, pos) });
 					}
 				}
-				return { metas: [ for (m in metas) m.name ], addrArgs: ArrayMap.fromArray(addr), args: argdef };
+				return { metas: [ for (m in metas) if (!isInternalMeta(m.name)) m.name ], addrArgs: ArrayMap.fromArray(addr), args: argdef };
 			case _:
 				throw new Error('(internal assert) The type $t is not a function', pos);
 		}
@@ -231,9 +231,9 @@ class Build
 		{
 			switch [meta.name, meta.params]
 			{
-				case [ (':route' | 'route'), [{ expr:EConst(CString(s)) }] ]:
+				case [ (':route' | 'route'), [{ expr:EConst(CString(s)) } | { expr: EConst(CIdent(s)) }] ]:
 					name = s;
-				case [ (':verb' | 'verb'), [{ expr:EConst(CString(s)) }] ]:
+				case [ (':verb' | 'verb'), [{ expr:EConst(CString(s)) } | { expr: EConst(CIdent(s)) }] ]:
 					verb = s;
 				case _:
 			}
@@ -257,8 +257,12 @@ class Build
 								if (name == null) name = str;
 								break;
 						}
-						if (name == null)
+						if (isLast)
+							name = '';
+						else if (name == null)
 							name = str.charAt(i).toLowerCase() + str.substr(i+1);
+						if (verb != null && verb != v && v != 'any')
+							throw new Error('An explicit verb "$verb" was defined for field "$str", but its field already suggests the use of the incompatible verb "$v"', pos);
 						verb = v;
 					}
 				}
@@ -270,5 +274,16 @@ class Build
 		if (name == null || verb == null)
 			throw new Error('The route name "$str" doesn\'t start with the verb filter or the special "any" name. If it is not a route, use the metadata @:skip or make the function private to avoid this error.', pos);
 		return { name:name, verb:verb };
+	}
+
+	private static function isInternalMeta(name:String)
+	{
+		return switch(name)
+		{
+			case 'verb' | ':verb' | 'route' | ':route' | ':skip':
+				true;
+			case _:
+				false;
+		}
 	}
 }
