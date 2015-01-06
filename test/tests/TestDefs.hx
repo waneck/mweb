@@ -26,7 +26,15 @@ import mweb.internal.Data;
 			key: '',
 			verb: 'any',
 			name: 'any',
-			data: RouteFunc({ metas:[], addrArgs:cast [], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
+		}] }), r._getDispatchData() );
+
+		r = route({ any: @someMeta function() {} });
+		Assert.same( RouteObj({ routes: cast [{
+			key: '',
+			verb: 'any',
+			name: 'any',
+			data: RouteFunc({ metas:['someMeta'], addrArgs:[], args: null })
 		}] }), r._getDispatchData() );
 
 		// r = route({ something: @:verb(get) function() {} });
@@ -34,7 +42,7 @@ import mweb.internal.Data;
 		// 	key: 'something',
 		// 	verb: 'get',
 		// 	name: 'something',
-		// 	data: RouteFunc({ metas:[], addrArgs:cast [], args: null })
+		// 	data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		// }] }), r._getDispatchData() );
 
 		r = route({ anyTest: function() {} });
@@ -42,7 +50,7 @@ import mweb.internal.Data;
 			key: 'test',
 			verb: 'any',
 			name: 'anyTest',
-			data: RouteFunc({ metas:[], addrArgs:cast [], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}] }), r._getDispatchData() );
 
 		r = route({ anyTest: function() {}, getOther: function() {} });
@@ -50,12 +58,12 @@ import mweb.internal.Data;
 			key: 'other',
 			verb: 'get',
 			name: 'getOther',
-			data: RouteFunc({ metas:[], addrArgs:cast [], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}, {
 			key: 'test',
 			verb: 'any',
 			name: 'anyTest',
-			data: RouteFunc({ metas:[], addrArgs:cast [], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}] }), r._getDispatchData() );
 
 		r = route({ anyTest: function() {}, getOther: function() {}, something: {} });
@@ -63,7 +71,7 @@ import mweb.internal.Data;
 			key: 'other',
 			verb: 'get',
 			name: 'getOther',
-			data: RouteFunc({ metas:[], addrArgs:cast [], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}, {
 			key: 'something',
 			verb: 'any',
@@ -73,14 +81,14 @@ import mweb.internal.Data;
 			key: 'test',
 			verb: 'any',
 			name: 'anyTest',
-			data: RouteFunc({ metas:[], addrArgs:cast [], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}] }), r._getDispatchData() );
 		r = route({ anyTest: function() {}, something: {}, getOther: function() {} });
 		Assert.same( RouteObj({ routes: cast [{
 			key: 'other',
 			verb: 'get',
 			name: 'getOther',
-			data: RouteFunc({ metas:[], addrArgs:cast [], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}, {
 			key: 'something',
 			verb: 'any',
@@ -90,7 +98,7 @@ import mweb.internal.Data;
 			key: 'test',
 			verb: 'any',
 			name: 'anyTest',
-			data: RouteFunc({ metas:[], addrArgs:cast [], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}] }), r._getDispatchData() );
 
 		r = route({ anyTest: function() {}, getOther: function() {}, something: new RouteDef1() });
@@ -98,7 +106,7 @@ import mweb.internal.Data;
 			key: 'other',
 			verb: 'get',
 			name: 'getOther',
-			data: RouteFunc({ metas:[], addrArgs:cast [], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}, {
 			key: 'something',
 			verb: 'any',
@@ -108,7 +116,7 @@ import mweb.internal.Data;
 			key: 'test',
 			verb: 'any',
 			name: 'anyTest',
-			data: RouteFunc({ metas:[], addrArgs:cast [], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}] }), r._getDispatchData() );
 
 
@@ -118,6 +126,59 @@ import mweb.internal.Data;
 		typeError( route({ getSomething: @:verb(delete) function() {} }) );
 	}
 
+	public function testAnonArguments()
+	{
+		var r = route({ any: function(i1:Int) {} });
+		Assert.same( RouteObj({ routes: cast [{
+			key: '',
+			verb: 'any',
+			name: 'any',
+			data: RouteFunc({ metas:[], addrArgs:[{ name:'i1', type:'Int', many:false }], args: null })
+		}] }), r._getDispatchData() );
+
+		//inferred
+		r = route({ any: function(i1) { i1 += 10; } });
+		Assert.same( RouteObj({ routes: cast [{
+			key: '',
+			verb: 'any',
+			name: 'any',
+			data: RouteFunc({ metas:[], addrArgs:[{ name:'i1', type:'Int', many:false }], args: null })
+		}] }), r._getDispatchData() );
+
+		r = route({ any: function(i1:Int, a1:String) {} });
+		Assert.same( RouteObj({ routes: cast [{
+			key: '',
+			verb: 'any',
+			name: 'any',
+			data: RouteFunc({ metas:[], addrArgs:[{ name:'i1', type:'Int', many:false }, { name:'a1', type:'String', many:false }], args: null })
+		}] }), r._getDispatchData() );
+		r = route({ any: function(i1:Int, a1:SomeAbstract, z1:String) {} });
+		Assert.same( RouteObj({ routes: cast [{
+			key: '',
+			verb: 'any',
+			name: 'any',
+			data: RouteFunc({ metas:[], addrArgs:[
+				{ name:'i1', type:'Int', many:false },
+				{ name:'a1', type:'tests.SomeAbstract', many:false },
+				{ name:'z1', type:'String', many:false }
+			], args: null })
+		}] }), r._getDispatchData() );
+
+		r = route({ any: function(a1:Int, a2:Array<String>, a3:Array<Int>, a4:String) {} });
+		Assert.same( RouteObj({ routes: cast [{
+			key: '',
+			verb: 'any',
+			name: 'any',
+			data: RouteFunc({ metas:[], addrArgs:[
+				{ name:'a1', type:'Int', many:false },
+				{ name:'a2', type:'String', many:true },
+				{ name:'a3', type:'Int', many:true },
+				{ name:'a4', type:'String', many:false }
+			], args: null })
+		}] }), r._getDispatchData() );
+
+	}
+
 	public function testBasicClass()
 	{
 		var r = new RouteDef1();
@@ -125,14 +186,18 @@ import mweb.internal.Data;
 			key: '',
 			verb: 'any',
 			name: 'any',
-			data: RouteFunc({ metas:[], addrArgs:cast [], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}, {
 			key: 'other',
 			verb: 'get',
 			name: 'getOther',
-			data: RouteFunc({ metas:[], addrArgs:cast [], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}] }), r._getDispatchData() );
 	}
+}
+
+abstract SomeAbstract(String)
+{
 }
 
 private class RouteDef1 extends mweb.Route

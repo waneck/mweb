@@ -60,7 +60,6 @@ class Build
 			for( t in types )
 				switch( t ) {
 				case TInst(c, _) if (unify(t, route) && c.toString() != 'mweb.Route'):
-					trace('here',c);
 					var c = c.get();
 					if (!c.meta.has(':skip') && !c.meta.has('routeRtti'))
 					{
@@ -186,10 +185,16 @@ class Build
 									throw new Error('The type of the special argument "args" must be an anonymous type',pos);
 							}
 						case _:
-							addr.push({ key:arg.name, type: typeName(arg.t, pos) });
+							switch (follow(arg.t))
+							{
+								case TInst(_.get() => { pack:[], name:'Array' }, [t]):
+									addr.push({ name:arg.name, type:typeName(t, pos), many:true });
+								case t:
+									addr.push({ name:arg.name, type: typeName(t, pos), many:false });
+							}
 					}
 				}
-				return { metas: [ for (m in metas) if (!isInternalMeta(m.name)) m.name ], addrArgs: ArrayMap.fromArray(addr), args: argdef };
+				return { metas: [ for (m in metas) if (!isInternalMeta(m.name)) m.name ], addrArgs:addr, args: argdef };
 			case _:
 				throw new Error('(internal assert) The type $t is not a function', pos);
 		}

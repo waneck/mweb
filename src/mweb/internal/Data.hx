@@ -8,7 +8,7 @@ typedef RouteObjData =
 typedef RoutesDef =
 {
 	metas: Array<String>,
-	addrArgs: ArrayMap<{ key:String, type:TypeName }>,
+	addrArgs: Array<{ name:String, type:TypeName, many:Bool }>,
 	args: Null<{ opt:Bool, data:ArrayMap<{ key:String, type:CType }> }>,
 }
 
