@@ -346,7 +346,20 @@ import mweb.internal.Data;
 			} })
 		}] }), r._getDispatchData() );
 	}
+
+	public function testExpectedFailures()
+	{
+		typeError(route( { any: function(a:Int->Void) {} } ));
+		typeError(route( { any: function(a:{}) {} } ));
+		typeError(route( { any: function(args:Int->Void) {} } ));
+		typeError(route( { any: function(args:{ arg1:Int->Void }) {} } ));
+		typeError(route( { any: function(a:Dynamic) {} } ));
+		typeError(route( { any: function(a:InexistantType) {} } ));
+		typeError(route( { any: function(a:{ > Something, x: Int }) {} } ));
+	}
 }
+
+typedef Something = { i:Int };
 
 abstract SomeAbstract(String)
 {
