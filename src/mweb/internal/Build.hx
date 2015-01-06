@@ -59,15 +59,15 @@ class Build
 		Context.onGenerate(function(types) {
 			for( t in types )
 				switch( t ) {
-				case TInst(c, _) if (unify(route, t) && c.toString() != 'mweb.Route'):
+				case TInst(c, _) if (unify(t, route) && c.toString() != 'mweb.Route'):
 					trace('here',c);
 					var c = c.get();
 					if (!c.meta.has(':skip') && !c.meta.has('routeRtti'))
 					{
 						var s = new haxe.Serializer();
 						s.useEnumIndex = true;
-						s.useCache = true;
-						var data = dispatchDataType(t,c.meta.get(),c.pos);
+						// s.useCache = true;
+						var data = dispatchDataType(t,c.meta.get(),c.pos,true);
 						s.serialize(data);
 						c.meta.add("routeRtti", [ { expr : EConst(CString(s.toString())), pos : c.pos } ], c.pos);
 					}
@@ -78,14 +78,16 @@ class Build
 		return fields;
 	}
 
-	private static function dispatchDataType(atype:Type, metas:Array<MetadataEntry>, pos:Position):DispatchData
+	private static function dispatchDataType(atype:Type, metas:Array<MetadataEntry>, pos:Position, toplevel=false):DispatchData
 	{
 		var fields = null;
 		switch (follow(atype))
 		{
 			case TAnonymous(anon):
 				fields = anon.get().fields;
-			case TInst(inst,_):
+			case t = TInst(inst,_):
+				if ( !toplevel && unify(t, getType('mweb.Route')) )
+					return RouteCall;
 				fields = inst.get().fields.get();
 			case t = TFun(args,ret):
 				return RouteFunc(getRoutesDef(t,metas,pos));
@@ -233,8 +235,10 @@ class Build
 			{
 				case [ (':route' | 'route'), [{ expr:EConst(CString(s)) } | { expr: EConst(CIdent(s)) }] ]:
 					name = s;
+					throw new Error('Reserved metadata: "route"', meta.pos);
 				case [ (':verb' | 'verb'), [{ expr:EConst(CString(s)) } | { expr: EConst(CIdent(s)) }] ]:
 					verb = s;
+					throw new Error('Reserved metadata: "verb"', meta.pos);
 				case _:
 			}
 		}
