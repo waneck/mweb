@@ -178,7 +178,7 @@ class Build
 									var map = [];
 									for (field in anon.get().fields)
 									{
-										map.push({ key:field.name, type:ctype(field.type, pos, field.name) });
+										map.push({ key:field.name, type:ctype(field.type, pos, field.name), opt:field.meta.has(':optional') });
 									}
 									argdef = { opt: arg.opt, data: ArrayMap.fromArray(map) };
 								case _:
@@ -206,7 +206,7 @@ class Build
 		return switch(follow(t))
 		{
 			case TAnonymous(anon):
-				AnonType(ArrayMap.fromArray([ for (field in anon.get().fields) { key:field.name, type:ctype(field.type, pos, field.name) }]));
+				AnonType(ArrayMap.fromArray([ for (field in anon.get().fields) { key:field.name, type:ctype(field.type, pos, field.name), opt:field.meta.has(':optional') }]));
 			case t = TInst(_,_), t = TEnum(_,_), t = TAbstract(_,_):
 				TypeName(typeName(t,pos));
 			case _:

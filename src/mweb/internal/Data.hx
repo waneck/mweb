@@ -9,13 +9,13 @@ typedef RoutesDef =
 {
 	metas: Array<String>,
 	addrArgs: Array<{ name:String, type:TypeName, many:Bool }>,
-	args: Null<{ opt:Bool, data:ArrayMap<{ key:String, type:CType }> }>,
+	args: Null<{ opt:Bool, data:ArrayMap<{ key:String, opt:Bool, type:CType }> }>,
 }
 
 enum CType
 {
 	TypeName(name:TypeName);
-	AnonType(names:ArrayMap<{ key:String, type: CType }>);
+	AnonType(names:ArrayMap<{ key:String, opt:Bool, type:CType }>);
 }
 
 typedef TypeName = String;

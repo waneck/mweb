@@ -2,7 +2,7 @@ package mweb.internal;
 
 private typedef K = String
 
-@:forward(iterator,length) abstract ArrayMap<T : { key:K }>(Array<T>)
+@:forward(iterator,length) abstract ArrayMap<T : { key:K }>(Array<T>) from Array<T>
 {
 	inline private function new(arr)
 	{
