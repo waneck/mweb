@@ -2,13 +2,13 @@ package mweb;
 import mweb.internal.Data;
 import mweb.internal.*;
 
-class Dispatcher
+class Dispatcher<T>
 {
 	private function new()
 	{
 	}
 
-	public function dispatch(definition:Def):DispatchResult
+	public function dispatch(route:Route<T>):T
 	{
 	}
 

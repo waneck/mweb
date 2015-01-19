@@ -357,6 +357,10 @@ import mweb.internal.Data;
 		typeError(route( { any: function(a:InexistantType) {} } ));
 		typeError(route( { any: function(a:{ > Something, x: Int }) {} } ));
 	}
+
+	public function testMap()
+	{
+	}
 }
 
 typedef Something = { i:Int };
