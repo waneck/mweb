@@ -7,6 +7,7 @@ import mweb.internal.Data;
 
 using Lambda;
 using haxe.macro.TypeTools;
+using haxe.macro.ExprTools;
 
 class Build
 {
@@ -67,7 +68,7 @@ class Build
 						var s = new haxe.Serializer();
 						s.useEnumIndex = true;
 						// s.useCache = true;
-						var data = dispatchDataType(t,c.meta.get(),c.pos,true);
+						var data = dispatchDataType(t,c.meta.get(),c.pos,true).data;
 						s.serialize(data);
 						c.meta.add("routeRtti", [ { expr : EConst(CString(s.toString())), pos : c.pos } ], c.pos);
 					}
@@ -78,24 +79,65 @@ class Build
 		return fields;
 	}
 
-	private static function dispatchDataType(atype:Type, metas:Array<MetadataEntry>, pos:Position, toplevel=false):DispatchData
+	public static function routeTypeFromType(t:Type)
 	{
-		var fields = null;
+		if (t == null) return null;
+		switch (follow(t))
+		{
+			case TInst(_.get() => ({ name:"Route", pack:["mweb"] } | { name:"AnonRoute", pack:["mweb","internal"] }), [t]):
+				switch(follow(t))
+				{
+					case TDynamic(_):
+						return typeof(macro (null : Dynamic));
+					case _:
+				}
+			case _:
+		}
+		// find out which Route<T> type it actually is
+		// use Haxe's own type inference to do that
+		var monoRoute = typeof(macro {
+			function getRoute<T>():mweb.Route<T> { return null; }
+			getRoute();
+		} );
+		if (unify(t, monoRoute))
+		{
+			switch(follow(monoRoute))
+			{
+				case TInst(_.get() => { name:"Route" }, [t]):
+					return t;
+				case _:
+					throw "assert";
+			}
+		}
+		return null;
+	}
+
+	private static function dispatchDataType(atype:Type, metas:Array<MetadataEntry>, pos:Position, toplevel=false):{ data:DispatchData, routeType:Type }
+	{
+		var fields = null,
+		    typeToUnify = null;
 		switch (follow(atype))
 		{
 			case TAnonymous(anon):
 				fields = anon.get().fields;
 			case t = TInst(inst,_):
-				if ( !toplevel && unify(t, typeof(macro (null : mweb.Route<Dynamic>))) )
-					return RouteCall;
+				var tuni = routeTypeFromType(t);
+				if (tuni != null)
+				{
+					if (toplevel)
+						typeToUnify = tuni;
+					else
+						return { data:RouteCall, routeType: tuni };
+				}
 				fields = inst.get().fields.get();
 			case t = TFun(args,ret):
-				return RouteFunc(getRoutesDef(t,metas,pos));
+				return { data:RouteFunc(getRoutesDef(t,metas,pos)), routeType: ret };
 			case _:
 				throw new Error('The type $atype cannot be transformed into a Route', pos);
 		}
 
-		var routes = [];
+		var routes = [],
+		    routeTypes = [];
 		for (field in fields)
 		{
 			var metas = field.meta.get();
@@ -103,15 +145,105 @@ class Build
 				continue;
 
 			var type = dispatchDataType(field.type,metas,field.pos);
-			var nameverb = splitVerb(field.name,metas,type,field.pos);
+			var nameverb = splitVerb(field.name,metas,type.data,field.pos);
 
-			routes.push({ key:nameverb.name, verb:nameverb.verb, data:type, name:field.name });
+			routes.push({ key:nameverb.name, verb:nameverb.verb, data:type.data, name:field.name });
+			routeTypes.push(type.routeType);
 		}
 
-		return RouteObj({ routes: ArrayMap.fromArray(routes) });
+		var t = unifyTypes(routeTypes, typeToUnify, pos, function() return [
+			for (i in 0...routeTypes.length)
+			{
+				var r = routes[i],
+				    t = routeTypes[i];
+				var f = fields.find(function(cf) return cf.name == r.name);
+				new Error('Field ${r.name}: type $t',f != null ? f.pos : pos);
+			} ]);
+
+		return { data:RouteObj({ routes: ArrayMap.fromArray(routes) }), routeType: t };
+
+		// try
+		// {
+		// 	var exprs = [ for (t in routeTypes) {
+		// 		var complex = t.toComplexType();
+		// 		macro ( cast null : $complex );
+		// 	} ];
+		// 	var i = 0;
+		// 	var sw = { expr: ESwitch(macro 0, [ for (e in exprs) { values:macro $v{i++}, expr: e } ], null) };
+		// 	if (typeToUnify != null)
+		// 	{
+		// 		var complex = typeToUnify.toComplexType();
+		// 		sw = macro ( $sw : $complex );
+		// 	}
+
+		// 	var t = typeof(sw);
+		// 	switch( follow(t) )
+		// 	{
+		// 		case TInst(_,[t]):
+		// 			return { data: RouteObj({ routes: ArrayMap.fromArray(routes) }), routeType: typeToUnify != null ? typeToUnify : t };
+		// 		case _: throw 'assert';
+		// 	}
+		// }
+		// catch(e:Error)
+		// {
+		// 	Context.warning('Cannot build route with current types: type mismatch',pos);
+		// 	if (typeToUnify != null)
+		// 		Context.warning('All routes must return an object that is of type $typeToUnify',pos);
+		// 	Context.warning('The following route types were inferred:',pos);
+		// 	for (i in 0...routeTypes.length)
+		// 	{
+		// 		var r = routes[i],
+		// 		    t = routeTypes[i];
+		// 		var f = fields.find(function(cf) return cf.name == r.name);
+		// 		Context.warning('Field ${r.name}: type $t',f != null ? f.pos : pos);
+		// 	}
+		// 	throw new Error(e.message, pos);
+		// }
 	}
 
-	public static function dispatchData(anon:Expr):DispatchData
+	private static function unifyTypes(types:Array<Type>, mainType:Null<Type>, pos:Position, warnings:Void->Array<Error>)
+	{
+		if (types.length == 0)
+			if (mainType == null)
+				return typeof( macro (null : Dynamic) );
+			else
+				return mainType;
+		try
+		{
+			var exprs = [ for (t in types) switch(follow(t)) {
+				case TDynamic(null) | TMono(_):
+					macro null;
+				case _:
+					var complex = t.toComplexType();
+					macro ( cast null : $complex );
+			} ];
+			var i = 0;
+			var sw = { expr: ESwitch(macro 0, [ for (e in exprs) { values:[macro $v{i++}], expr: e } ], macro null), pos:pos };
+			if (mainType != null)
+			{
+				var complex = mainType.toComplexType();
+				sw = macro ( $sw : $complex );
+			}
+
+			var t = typeof(sw);
+			return mainType != null ? mainType : t;
+		}
+		catch(e:Error)
+		{
+			if (!Context.defined("mweb_testing"))
+			{
+				Context.warning('Cannot build route with current types: type mismatch',pos);
+				if (mainType != null)
+					Context.warning('All routes must return an object that is of type $mainType',pos);
+				Context.warning('The following route types were inferred:',pos);
+				for (msg in warnings())
+					Context.warning(msg.message,msg.pos);
+			}
+			throw new Error(e.message, pos);
+		}
+	}
+
+	public static function dispatchData(anon:Expr, mainType:Null<Type>):{ data: DispatchData, routeType: Type }
 	{
 		var metas = null;
 		inline function updMetas(expr:Expr)
@@ -139,18 +271,24 @@ class Build
 		switch(anon.expr)
 		{
 			case EObjectDecl(fields):
-				var routes = [];
+				var routes = [],
+				    routeTypes = [],
+				    apos = [];
 				for (field in fields)
 				{
 					updMetas(field.expr);
 					if (metas.exists(function(m) return m.name == ':skip'))
 						continue;
-					var type = dispatchData(field.expr);
-					var nameverb = splitVerb(field.field,metas,type,field.expr.pos);
+					var type = dispatchData(field.expr, mainType);
+					var nameverb = splitVerb(field.field,metas,type.data,field.expr.pos);
+					routeTypes.push(type.routeType);
+					apos.push(field.expr.pos);
 
-					routes.push({ key:nameverb.name, verb:nameverb.verb, data:type, name:field.field });
+					routes.push({ key:nameverb.name, verb:nameverb.verb, data:type.data, name:field.field });
 				}
-				return RouteObj({ routes: ArrayMap.fromArray(routes) });
+				var t = unifyTypes(routeTypes, mainType, anon.pos, function()
+					return [ for (i in 0...routes.length) new Error('Field ${routes[i].name}: type ${routeTypes[i]}', apos[i]) ]);
+				return { data: RouteObj({ routes: ArrayMap.fromArray(routes) }), routeType:t };
 			case _:
 				var t = typeof(anon);
 				return dispatchDataType(t,anonMetas,anon.pos);

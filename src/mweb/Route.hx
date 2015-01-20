@@ -42,10 +42,35 @@ class Route<T>
 	}
 #end
 
-	macro public static function route(anon:haxe.macro.Expr.ExprOf<Dynamic>) : haxe.macro.Expr.ExprOf<Route<Dynamic>>
+	macro public static function route(anon:haxe.macro.Expr.ExprOf<Dynamic>, isDynamic:Bool=false) : haxe.macro.Expr.ExprOf<Route<Dynamic>>
 	{
 		var pos = anon.pos;
-		var expr = haxe.macro.Context.makeExpr( mweb.internal.Build.dispatchData(anon), pos );
-		return macro new mweb.internal.AnonRoute($anon, $expr);
+		var mainType = if (isDynamic)
+		{
+			haxe.macro.Context.typeof(macro (null : Dynamic));
+		} else {
+			var exp = haxe.macro.Context.getExpectedType();
+			if (exp == null)
+				null;
+			else switch( haxe.macro.Context.follow(exp) )
+			{
+				case TMono(_):
+					null;
+				case t = TDynamic(_):
+					t;
+				case _:
+					mweb.internal.Build.routeTypeFromType(exp);
+			}
+		};
+		var t = mweb.internal.Build.dispatchData(anon, mainType);
+		var expr = haxe.macro.Context.makeExpr( t.data, pos );
+		switch( haxe.macro.Context.follow(t.routeType) )
+		{
+			case TMono(_):
+				return macro new mweb.internal.AnonRoute($anon, $expr);
+			case t:
+				var complex = haxe.macro.TypeTools.toComplexType(t);
+				return macro new mweb.internal.AnonRoute<$complex>($anon, $expr);
+		}
 	}
 }

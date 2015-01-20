@@ -2,4 +2,6 @@
 -cp test
 -main TestAll
 -lib utest
+
+-D mweb_testing
 --interp
