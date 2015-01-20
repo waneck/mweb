@@ -9,6 +9,7 @@ class TestAll
 		var runner = new Runner();
 
 		runner.addCase(new TestDefs());
+		runner.addCase(new TestDecoder());
 		runner.addCase(new TestDispatch());
 		Report.create(runner);
 

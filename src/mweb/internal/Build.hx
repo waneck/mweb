@@ -14,6 +14,10 @@ class Build
 	public static var firstCompilation = false;
 	public static var addedRtti = false;
 
+	private static var typesWithDecoders:Map<String,Bool> = new Map();
+	private static var typesToCheck:Map<String,Array<Position>> = new Map();
+	private static var usedAbstracts:Map<String,Bool> = new Map();
+
 	public static function build():Array<Field>
 	{
 		var fields = getBuildFields();
@@ -50,6 +54,7 @@ class Build
 			firstCompilation = false;
 			Context.onMacroContextReused(function() {
 				addedRtti = false;
+				typesToCheck = new Map();
 				// GLOBAL = null;
 				return true;
 			});
@@ -60,7 +65,8 @@ class Build
 
 		Context.onGenerate(function(types) {
 			for( t in types )
-				switch( t ) {
+				switch( t )
+				{
 				case TInst(c, _) if (unify(t, route) && c.toString() != 'mweb.Route'):
 					var c = c.get();
 					if (!c.meta.has(':skip') && !c.meta.has('routeRtti'))
@@ -74,9 +80,103 @@ class Build
 					}
 				default:
 				}
+
+			postProcessAbstracts(types);
 		});
 		Context.registerModuleReuseCall("mweb.Route", "mweb.internal.Build.build()");
 		return fields;
+	}
+
+	private static function postProcessAbstracts(types:Array<Type>):Void
+	{
+		var exprs = [];
+		var str = getType('String');
+		for (t in types)
+		{
+			// trace(usedAbstracts);
+			switch(follow(t))
+			{
+				case TAbstract(a,_) if (usedAbstracts[a.toString()] && !a.get().isPrivate):
+					var name = a.toString();
+					var a = a.get();
+					var fnName = null,
+							found = true;
+					if (a.impl != null)
+					{
+						var impl = a.impl.get();
+						for (field in impl.statics.get())
+						{
+							if (field.name == 'fromString')
+							{
+								fnName = field.name;
+								found = true;
+								break;
+							}
+						}
+					}
+					if (fnName == null && a.from != null)
+					{
+						for (f in a.from)
+						{
+							if (unify(f.t,str))
+							{
+								if (f.field != null)
+									fnName = f.field.name;
+								found = true;
+							}
+						}
+					}
+
+					trace('here',name,found,fnName);
+					if (found)
+					{
+						var expr = if (fnName != null)
+						{
+							parse(a.module + '.' + a.name + '.' + fnName,a.pos);
+						} else {
+							macro function(s:String) return s; //has a from String definition
+						}
+						expr = macro mweb.Dispatcher.addDecoderRuntime($v{name},@:privateAccess $expr);
+						exprs.push(expr);
+					} else {
+						var used = typesToCheck[name];
+						if (used != null)
+						{
+							warning('Abstract type $name needs a decoder for mweb.Dispatcher, but no decoder was found',a.pos);
+							for (pos in used)
+								warning('Type $name was used here',pos);
+						}
+					}
+				case _:
+			}
+		}
+
+		trace(exprs.length);
+		if (exprs.length > 0)
+		{
+			var expr = { expr:EBlock(exprs), pos:Context.currentPos() };
+			var def = macro class AbstractDecoders {
+				@:keep public function new() { }
+				@:keep public function init()
+					$expr;
+			}
+			def.pack = ['mweb','internal'];
+			trace("defining type");
+			defineType(def);
+		}
+	}
+
+	public static function registerDecoder(type:Type, pos:Position)
+	{
+		var name = typeName(type, pos);
+		switch(name)
+		{
+			case "Int" | "String" | "Float" | "Bool" | "Single":
+				throw new Error('Cannot register decoder for basic type $name',pos);
+			case _:
+				typesWithDecoders[name] = true;
+		}
+		return name;
 	}
 
 	public static function routeTypeFromType(t:Type)
@@ -161,44 +261,6 @@ class Build
 			} ]);
 
 		return { data:RouteObj({ routes: ArrayMap.fromArray(routes) }), routeType: t };
-
-		// try
-		// {
-		// 	var exprs = [ for (t in routeTypes) {
-		// 		var complex = t.toComplexType();
-		// 		macro ( cast null : $complex );
-		// 	} ];
-		// 	var i = 0;
-		// 	var sw = { expr: ESwitch(macro 0, [ for (e in exprs) { values:macro $v{i++}, expr: e } ], null) };
-		// 	if (typeToUnify != null)
-		// 	{
-		// 		var complex = typeToUnify.toComplexType();
-		// 		sw = macro ( $sw : $complex );
-		// 	}
-
-		// 	var t = typeof(sw);
-		// 	switch( follow(t) )
-		// 	{
-		// 		case TInst(_,[t]):
-		// 			return { data: RouteObj({ routes: ArrayMap.fromArray(routes) }), routeType: typeToUnify != null ? typeToUnify : t };
-		// 		case _: throw 'assert';
-		// 	}
-		// }
-		// catch(e:Error)
-		// {
-		// 	Context.warning('Cannot build route with current types: type mismatch',pos);
-		// 	if (typeToUnify != null)
-		// 		Context.warning('All routes must return an object that is of type $typeToUnify',pos);
-		// 	Context.warning('The following route types were inferred:',pos);
-		// 	for (i in 0...routeTypes.length)
-		// 	{
-		// 		var r = routes[i],
-		// 		    t = routeTypes[i];
-		// 		var f = fields.find(function(cf) return cf.name == r.name);
-		// 		Context.warning('Field ${r.name}: type $t',f != null ? f.pos : pos);
-		// 	}
-		// 	throw new Error(e.message, pos);
-		// }
 	}
 
 	private static function unifyTypes(types:Array<Type>, mainType:Null<Type>, pos:Position, warnings:Void->Array<Error>)
@@ -356,13 +418,24 @@ class Build
 		}
 	}
 
-	private static function typeName(t:Type, pos:Position):TypeName
+	public static function typeName(t:Type, pos:Position, register=true):TypeName
 	{
 		return switch(follow(t))
 		{
 			case TInst(c,_): c.toString();
 			case TEnum(e,_): e.toString();
-			case TAbstract(a,_): a.toString();
+			case TAbstract(a,_):
+				var a2 = a.get();
+				if (a2.isPrivate)
+					throw new Error('Private abstract type ${t.toString()} is not supported',pos);
+				var ret = a.toString();
+				switch(ret)
+				{
+					case "Int" | "String" | "Float" | "Bool" | "Single":
+					case _:
+						usedAbstracts[ret] = true;
+				}
+				ret;
 			case _:
 				throw new Error('Type ${follow(t)} is not supported as an address argument',pos);
 		}

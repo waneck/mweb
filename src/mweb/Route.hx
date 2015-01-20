@@ -42,10 +42,10 @@ class Route<T>
 	}
 #end
 
-	macro public static function route(anon:haxe.macro.Expr.ExprOf<Dynamic>, isDynamic:Bool=false) : haxe.macro.Expr.ExprOf<Route<Dynamic>>
+	macro public static function route(anon:haxe.macro.Expr.ExprOf<Dynamic>, forceDynamic:Bool=false) : haxe.macro.Expr.ExprOf<Route<Dynamic>>
 	{
 		var pos = anon.pos;
-		var mainType = if (isDynamic)
+		var mainType = if (forceDynamic)
 		{
 			haxe.macro.Context.typeof(macro (null : Dynamic));
 		} else {
