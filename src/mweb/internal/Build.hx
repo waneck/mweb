@@ -89,11 +89,10 @@ class Build
 
 	private static function postProcessAbstracts(types:Array<Type>):Void
 	{
-		var exprs = [];
+		var defs = [];
 		var str = getType('String');
 		for (t in types)
 		{
-			// trace(usedAbstracts);
 			switch(follow(t))
 			{
 				case TAbstract(a,_) if (usedAbstracts[a.toString()] && !a.get().isPrivate):
@@ -127,17 +126,21 @@ class Build
 						}
 					}
 
-					trace('here',name,found,fnName);
+					// trace('here',name,found,fnName);
 					if (found)
 					{
-						var expr = if (fnName != null)
-						{
-							parse(a.module + '.' + a.name + '.' + fnName,a.pos);
-						} else {
-							macro function(s:String) return s; //has a from String definition
+						var impl = null;
+						if (a.impl != null) impl = a.impl.get();
+						var def = {
+							type: impl == null ?
+								a.pack.join('.') + (a.pack.length == 0 ? '' : '.') + a.name :
+								impl.pack.join('.') + '.' + impl.name,
+							fnName: fnName,
+							name: name
 						}
-						expr = macro mweb.Dispatcher.addDecoderRuntime($v{name},@:privateAccess $expr);
-						exprs.push(expr);
+						// expr = macro mweb.Dispatcher.addDecoderRuntime($v{name},@:privateAccess $expr);
+						// exprs.push(expr);
+						defs.push(def);
 					} else {
 						var used = typesToCheck[name];
 						if (used != null)
@@ -151,18 +154,15 @@ class Build
 			}
 		}
 
-		trace(exprs.length);
-		if (exprs.length > 0)
+		switch (getType('mweb.Dispatcher'))
 		{
-			var expr = { expr:EBlock(exprs), pos:Context.currentPos() };
-			var def = macro class AbstractDecoders {
-				@:keep public function new() { }
-				@:keep public function init()
-					$expr;
-			}
-			def.pack = ['mweb','internal'];
-			trace("defining type");
-			defineType(def);
+			case TInst(cl,_):
+				var cl = cl.get();
+				if (cl.meta.has('abstractDefs'))
+					cl.meta.remove('abstractDefs');
+				cl.meta.add('abstractDefs',[ for (d in defs) macro $v{d} ],Context.currentPos());
+			case _:
+				throw 'assert';
 		}
 	}
 

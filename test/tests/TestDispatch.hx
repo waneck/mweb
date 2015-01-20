@@ -12,7 +12,7 @@ class TestDispatch
 	{
 	}
 
-	public function testSimple()
-	{
-	}
+	// public function testSimple()
+	// {
+	// }
 }

@@ -21,6 +21,9 @@ import mweb.internal.*;
 		var r = route({ any: function(a:HasFromString,b:FromStringMeta,c:FromStringField,d:FromStringBoth) {} });
 
 		equals('test',Dispatcher.getDecoderFor('tests.HasFromString')('test'));
+		equals(110, Dispatcher.getDecoderFor('tests.FromStringMeta')('11'));
+		equals(101, Dispatcher.getDecoderFor('tests.FromStringField')('10'));
+		equals(102, Dispatcher.getDecoderFor('tests.FromStringBoth')('10'));
 	}
 }
 
@@ -53,7 +56,7 @@ abstract FromStringBoth(Float)
 
 	public static function fromString(s:String):FromStringField
 	{
-		return cast Std.parseInt(s) * 10.1;
+		return cast Std.parseInt(s) * 10.2;
 	}
 }
 

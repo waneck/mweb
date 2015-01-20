@@ -45,12 +45,30 @@ class Dispatcher<T>
 		if (decoders == null)
 		{
 			decoders = new Map();
-			var t = Type.resolveClass('mweb.internal.AbstractDecoders');
-			trace(t);
-			if (t != null)
+			var meta = haxe.rtti.Meta.getType(Dispatcher);
+			if (meta != null && meta.abstractDefs != null)
 			{
-				trace('t != null!');
-				Type.createInstance(t,[]).init();
+				var dec = decoders;
+				var defs = meta.abstractDefs;
+				for (def in defs)
+				{
+					var name:String = def.name;
+					trace(name);
+					if (def.fnName == null)
+					{
+						dec[name] = function(s:String) return s;
+					} else {
+						var t = Type.resolveClass(def.type);
+						if (t != null)
+						{
+							var fn = Reflect.field(t,def.fnName);
+							if (fn == null)
+								trace('WARNING: Type $name was included in build, but the field ${def.fnName} was not found. Perhaps it was eliminated by DCE?');
+							else
+								dec[name] = fn;
+						}
+					}
+				}
 			}
 		}
 		return decoders;
