@@ -81,10 +81,78 @@ class Build
 				default:
 				}
 
+			postProcess1(types);
 			postProcessAbstracts(types);
+			postProcessClasses(types);
 		});
 		Context.registerModuleReuseCall("mweb.Route", "mweb.internal.Build.build()");
 		return fields;
+	}
+
+	private static function postProcess1(types:Array<Type>):Void
+	{
+		var defs = [];
+		for (t in types)
+		{
+			switch(follow(t))
+			{
+				case TInst(_,_) | TEnum(_,_) | TAbstract(_,_):
+					var tn = typeName(t,null,false);
+					var t1 = typesToCheck[tn];
+					if (t1 != null)
+					{
+						var dec = typesWithDecoders[tn];
+						if (dec != null)
+							typesToCheck.remove(tn);
+					}
+				case _:
+			}
+		}
+	}
+
+	private static function postProcessClasses(types:Array<Type>):Void
+	{
+		inline function warnDecoder(name:String, pos:Position)
+		{
+			var used = typesToCheck[name];
+			if (used != null)
+			{
+				warning('Abstract type $name needs a decoder for mweb.Dispatcher, but no decoder was found', pos);
+				for (pos in used)
+					warning('Type $name was used here',pos);
+			}
+		}
+		var defs = [];
+		var str = getType('String');
+		for (t in types)
+		{
+			var base:ClassType = null;
+			switch(follow(t))
+			{
+				case TInst(c,_): base = c.get();
+				case TEnum(e,_):
+					var tn = typeName(t,null,false);
+					warnDecoder(tn,e.get().pos);
+				case TAbstract(a,_):
+					var tn = typeName(t,null,false);
+					warnDecoder(tn,a.get().pos);
+				case _: continue;
+			}
+			var tn = typeName(t,null,false);
+			var t1 = typesToCheck[tn];
+			if (t1 != null)
+			{
+				var dec = typesWithDecoders[tn];
+				if (dec == null)
+				{
+					var fromString = base.statics.get().find(function(cf) return cf.name == "fromString");
+					if (fromString == null)
+					{
+						warnDecoder(tn,base.pos);
+					}
+				}
+			}
+		}
 	}
 
 	private static function postProcessAbstracts(types:Array<Type>):Void
@@ -95,59 +163,65 @@ class Build
 		{
 			switch(follow(t))
 			{
-				case TAbstract(a,_) if (usedAbstracts[a.toString()] && !a.get().isPrivate):
-					var name = a.toString();
-					var a = a.get();
-					var fnName = null,
-							found = true;
-					if (a.impl != null)
+				case TAbstract(a,_):
+					var a2 = a.get();
+					if (usedAbstracts[a.toString()] == true && !a2.isPrivate)
 					{
-						var impl = a.impl.get();
-						for (field in impl.statics.get())
-						{
-							if (field.name == 'fromString')
-							{
-								fnName = field.name;
+						var name = a.toString();
+						// trace(name,usedAbstracts[a.toString()]);
+						var a = a2;
+						var fnName = null,
 								found = true;
-								break;
+						if (a.impl != null)
+						{
+							var impl = a.impl.get();
+							for (field in impl.statics.get())
+							{
+								if (field.name == 'fromString')
+								{
+									fnName = field.name;
+									found = true;
+									break;
+								}
 							}
 						}
-					}
-					if (fnName == null && a.from != null)
-					{
-						for (f in a.from)
+						if (fnName == null && a.from != null)
 						{
-							if (unify(f.t,str))
-							{
-								if (f.field != null)
-									fnName = f.field.name;
-								found = true;
+							for (f in a.from)
+								{
+								if (unify(f.t,str))
+								{
+									if (f.field != null)
+										fnName = f.field.name;
+									found = true;
+									}
 							}
 						}
-					}
 
-					// trace('here',name,found,fnName);
-					if (found)
-					{
-						var impl = null;
-						if (a.impl != null) impl = a.impl.get();
-						var def = {
-							type: impl == null ?
-								a.pack.join('.') + (a.pack.length == 0 ? '' : '.') + a.name :
-								impl.pack.join('.') + '.' + impl.name,
-							fnName: fnName,
-							name: name
-						}
-						// expr = macro mweb.Dispatcher.addDecoderRuntime($v{name},@:privateAccess $expr);
-						// exprs.push(expr);
-						defs.push(def);
-					} else {
-						var used = typesToCheck[name];
-						if (used != null)
+						// trace('here',name,found,fnName);
+						if (found)
 						{
-							warning('Abstract type $name needs a decoder for mweb.Dispatcher, but no decoder was found',a.pos);
-							for (pos in used)
-								warning('Type $name was used here',pos);
+							var impl = null;
+							if (a.impl != null) impl = a.impl.get();
+							var def = {
+								type: impl == null ?
+									a.pack.join('.') + (a.pack.length == 0 ? '' : '.') + a.name :
+									impl.pack.join('.') + '.' + impl.name,
+								fnName: fnName,
+								name: name
+							}
+							// expr = macro mweb.Dispatcher.addDecoderRuntime($v{name},@:privateAccess $expr);
+							// exprs.push(expr);
+							defs.push(def);
+							typesToCheck.remove(name);
+						// } else {
+							var used = typesToCheck[name];
+						// 	if (used != null)
+						// 	{
+						// 		warning('Abstract type $name needs a decoder for mweb.Dispatcher, but no decoder was found',a.pos);
+						// 		for (pos in used)
+						// 			warning('Type $name was used here',pos);
+						// 	}
 						}
 					}
 				case _:
@@ -420,10 +494,46 @@ class Build
 
 	public static function typeName(t:Type, pos:Position, register=true):TypeName
 	{
+		inline function reg(ret:String)
+		{
+			if (register)
+			{
+				var r = typesToCheck[ret];
+				if (r == null)
+					typesToCheck[ret] = r = [];
+				r.push(pos);
+			}
+		}
 		return switch(follow(t))
 		{
-			case TInst(c,_): c.toString();
-			case TEnum(e,_): e.toString();
+			case TInst(c,_):
+				var ret = c.toString();
+				switch(ret)
+				{
+					case "String":
+					case _:
+						reg(ret);
+				}
+				ret;
+			case TEnum(e,_):
+				var ret = e.toString();
+				var e = e.get();
+				var isSimple = true;
+				for (field in e.constructs)
+				{
+					switch(follow(field.type))
+					{
+						case TEnum(_,_):
+						case _:
+							isSimple = false;
+							break;
+					}
+				}
+				if (!isSimple)
+				{
+					reg(ret);
+				}
+				ret;
 			case TAbstract(a,_):
 				var a2 = a.get();
 				if (a2.isPrivate)
@@ -431,9 +541,10 @@ class Build
 				var ret = a.toString();
 				switch(ret)
 				{
-					case "Int" | "String" | "Float" | "Bool" | "Single":
+					case "Int" | "Float" | "Bool" | "Single":
 					case _:
-						usedAbstracts[ret] = true;
+						if (register) usedAbstracts[ret] = true;
+						reg(ret);
 				}
 				ret;
 			case _:

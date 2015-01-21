@@ -1,6 +1,7 @@
 package mweb;
 import mweb.internal.Data;
 import mweb.internal.*;
+import mweb.Errors;
 
 class Dispatcher<T>
 {
@@ -29,15 +30,45 @@ class Dispatcher<T>
 			case TFun([str],ret) if (haxe.macro.Context.unify(str.t, haxe.macro.Context.getType("String"))):
 				ret;
 			default:
-				throw new Error("Unsupported decoder type :" + haxe.macro.TypeTools.toString(t), decoder.pos);
+				throw new haxe.macro.Expr.Error("Unsupported decoder type :" + haxe.macro.TypeTools.toString(t), decoder.pos);
 		}
-		var name = mweb.internal.Build.registerDecoder(type);
-		return macro mcli.Dispatch.addDecoderRuntime($v{name}, $decoder);
+		var name = mweb.internal.Build.registerDecoder(type,decoder.pos);
+		return macro mweb.Dispatcher.addDecoderRuntime($v{name}, $decoder);
 	}
 
 	private static function getDecoderFor<T>(typeName:String):Null<String->T>
 	{
-		return decoders[typeName];
+		var ret = decoders[typeName];
+		if (ret == null)
+		{
+			var cls:Dynamic = Type.resolveClass(typeName);
+			if (cls == null)
+				cls = Type.resolveEnum(typeName);
+			if (cls == null)
+				throw TypeNotFound(typeName);
+			ret = Reflect.field(cls,'fromString');
+			if (ret != null)
+			{
+				decoders[typeName] = ret;
+			} else {
+				try
+				{
+					var ens = Type.getEnumConstructs(cls);
+					if (ens != null)
+					{
+						var ens = [for (e in ens) e.toLowerCase() => Type.createEnum(cls,e)];
+						ret = function(s:String) return ens[s.toLowerCase()];
+						decoders[typeName] = ret;
+					}
+				}
+				catch(e:Dynamic)
+				{
+				}
+				if (ret == null)
+					throw DecoderNotFound(typeName);
+			}
+		}
+		return ret;
 	}
 
 	private static function get_decoders()
@@ -53,7 +84,7 @@ class Dispatcher<T>
 				for (def in defs)
 				{
 					var name:String = def.name;
-					trace(name);
+					// trace(name);
 					if (def.fnName == null)
 					{
 						dec[name] = function(s:String) return s;
