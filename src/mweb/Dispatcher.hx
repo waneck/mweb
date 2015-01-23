@@ -5,8 +5,11 @@ import mweb.Errors;
 
 class Dispatcher<T>
 {
-	private function new()
+	public var request(default,null):HttpRequest;
+
+	private function new(request:HttpRequest)
 	{
+		this.request = request;
 	}
 
 	public function dispatch(route:Route<T>):T
@@ -75,7 +78,11 @@ class Dispatcher<T>
 	{
 		if (decoders == null)
 		{
-			decoders = new Map();
+			decoders = [
+				"Int" => function(v) return Std.parseInt,
+				"Float" => function(v):Null<Float> { var ret = Std.parseFloat(v); if (Math.isNaN(ret)) return null; return v; },
+				"String" => function(s) return s,
+			];
 			var meta = haxe.rtti.Meta.getType(Dispatcher);
 			if (meta != null && meta.abstractDefs != null)
 			{
