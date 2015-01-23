@@ -442,6 +442,7 @@ class Build
 				for (arg in args)
 				{
 					i++;
+					var opt = arg.opt;
 					switch(arg.name)
 					{
 						case 'args':
@@ -463,9 +464,12 @@ class Build
 							switch (follow(arg.t))
 							{
 								case TInst(_.get() => { pack:[], name:'Array' }, [t]):
-									addr.push({ name:arg.name, type:typeName(t, pos), many:true });
+									if (i == args.length || (i == args.length - 1 && args[i].name == 'args'))
+										addr.push({ name:arg.name, type:typeName(t, pos), many:true, opt:opt });
+									else
+										throw new Error('Array types must be the last parameter before "args" on address arguments', pos);
 								case t:
-									addr.push({ name:arg.name, type: typeName(t, pos), many:false });
+									addr.push({ name:arg.name, type: typeName(t, pos), many:false, opt:opt });
 							}
 					}
 				}
@@ -482,8 +486,19 @@ class Build
 		{
 			case TAnonymous(anon):
 				AnonType(ArrayMap.fromArray([ for (field in anon.get().fields) { key:field.name, type:ctype(field.type, pos, field.name), opt:field.meta.has(':optional') }]));
+			case TInst(_.get() => { name:"Array", pack: [] },[t]):
+				switch(follow(t))
+				{
+					case t = TInst(_,_), t = TEnum(_,_), t = TAbstract(_,_):
+						TypeName(typeName(t,pos),true);
+					case _:
+						if (argName != null)
+							throw new Error('Unsupported Array type $t for argument $argName', pos);
+						else
+							throw new Error('Unsupported Array type $t as argument', pos);
+				}
 			case t = TInst(_,_), t = TEnum(_,_), t = TAbstract(_,_):
-				TypeName(typeName(t,pos));
+				TypeName(typeName(t,pos),false);
 			case _:
 				if (argName != null)
 					throw new Error('Invalid type $t for argument $argName', pos);

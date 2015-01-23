@@ -12,7 +12,7 @@ typedef HttpRequest = {
 	function getURI():String;
 
 	/**
-		Should return a String containing the GET parameters
+		Should return a String containing the GET parameters.
 	 **/
 	function getParamsString():String;
 

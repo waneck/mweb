@@ -135,7 +135,7 @@ import mweb.internal.*;
 			key: '',
 			verb: 'any',
 			name: 'any',
-			data: RouteFunc({ metas:[], addrArgs:[{ name:'i1', type:'Int', many:false }], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[{ name:'i1', type:'Int', opt:false, many:false }], args: null })
 		}] }), r._getDispatchData() );
 
 		//inferred
@@ -144,7 +144,23 @@ import mweb.internal.*;
 			key: '',
 			verb: 'any',
 			name: 'any',
-			data: RouteFunc({ metas:[], addrArgs:[{ name:'i1', type:'Int', many:false }], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[{ name:'i1', type:'Int', opt:false, many:false }], args: null })
+		}] }), r._getDispatchData() );
+
+		//optional
+		var r = route({ any: function(?i1) { i1 += 10; } });
+		Assert.same( RouteObj({ routes: [{
+			key: '',
+			verb: 'any',
+			name: 'any',
+			data: RouteFunc({ metas:[], addrArgs:[{ name:'i1', type:'Int', opt:true, many:false }], args: null })
+		}] }), r._getDispatchData() );
+		var r = route({ any: function(i1=10) {} });
+		Assert.same( RouteObj({ routes: [{
+			key: '',
+			verb: 'any',
+			name: 'any',
+			data: RouteFunc({ metas:[], addrArgs:[{ name:'i1', type:'Int', opt:true, many:false }], args: null })
 		}] }), r._getDispatchData() );
 
 		var r = route({ any: function(i1:Int, a1:String) {} });
@@ -152,7 +168,7 @@ import mweb.internal.*;
 			key: '',
 			verb: 'any',
 			name: 'any',
-			data: RouteFunc({ metas:[], addrArgs:[{ name:'i1', type:'Int', many:false }, { name:'a1', type:'String', many:false }], args: null })
+			data: RouteFunc({ metas:[], addrArgs:[{ name:'i1', type:'Int', opt:false, many:false }, { name:'a1', type:'String', opt:false, many:false }], args: null })
 		}] }), r._getDispatchData() );
 		var r = route({ any: function(i1:Int, a1:SomeAbstract, z1:String) {} });
 		Assert.same( RouteObj({ routes: [{
@@ -160,23 +176,36 @@ import mweb.internal.*;
 			verb: 'any',
 			name: 'any',
 			data: RouteFunc({ metas:[], addrArgs:[
-				{ name:'i1', type:'Int', many:false },
-				{ name:'a1', type:'tests.SomeAbstract', many:false },
-				{ name:'z1', type:'String', many:false }
+				{ name:'i1', type:'Int', opt:false, many:false },
+				{ name:'a1', type:'tests.SomeAbstract', opt:false, many:false },
+				{ name:'z1', type:'String', opt:false, many:false }
 			], args: null })
 		}] }), r._getDispatchData() );
 
-		var r = route({ any: function(a1:Int, a2:Array<String>, a3:Array<Int>, a4:String) {} });
+		var r = route({ any: function(a1:Int, a2:String, a3:Int, a4:Array<String>) {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'any',
 			name: 'any',
 			data: RouteFunc({ metas:[], addrArgs:[
-				{ name:'a1', type:'Int', many:false },
-				{ name:'a2', type:'String', many:true },
-				{ name:'a3', type:'Int', many:true },
-				{ name:'a4', type:'String', many:false }
+				{ name:'a1', type:'Int', opt:false, many:false },
+				{ name:'a2', type:'String', opt:false, many:false },
+				{ name:'a3', type:'Int', opt:false, many:false },
+				{ name:'a4', type:'String', opt:false, many:true }
 			], args: null })
+		}] }), r._getDispatchData() );
+
+		var r = route({ any: function(a1:Int, a2:String, a3:Int, a4:Array<String>, ?args:{}) {} });
+		Assert.same( RouteObj({ routes: [{
+			key: '',
+			verb: 'any',
+			name: 'any',
+			data: RouteFunc({ metas:[], addrArgs:[
+				{ name:'a1', type:'Int', opt:false, many:false },
+				{ name:'a2', type:'String', opt:false, many:false },
+				{ name:'a3', type:'Int', opt:false, many:false },
+				{ name:'a4', type:'String', opt:false, many:true }
+			], args: { opt: true, data:[] } })
 		}] }), r._getDispatchData() );
 
 		// not supported
@@ -195,11 +224,11 @@ import mweb.internal.*;
 				data:[{
 					key: 'a1',
 					opt: false,
-					type: TypeName('String')
+					type: TypeName('String',false)
 				}, {
 					key: 'v1',
 					opt: false,
-					type: TypeName('Int')
+					type: TypeName('Int',false)
 				}]
 			} })
 		}] }), r._getDispatchData() );
@@ -214,7 +243,7 @@ import mweb.internal.*;
 				data:[{
 					key: 'a1',
 					opt: false,
-					type: TypeName('String')
+					type: TypeName('String',false)
 				}]
 			} })
 		}] }), r._getDispatchData() );
@@ -228,11 +257,11 @@ import mweb.internal.*;
 				data:[{
 					key: 'a1',
 					opt: true,
-					type: TypeName('String')
+					type: TypeName('String',false)
 				}, {
 					key: 'v1',
 					opt: false,
-					type: TypeName('Int')
+					type: TypeName('Int',false)
 				}]
 			} })
 		}] }), r._getDispatchData() );
@@ -250,16 +279,16 @@ import mweb.internal.*;
 					type: AnonType([{
 						key: 'a1',
 						opt: false,
-						type: TypeName('Int')
+						type: TypeName('Int',false)
 					}, {
 						key: 'otherField',
 						opt: false,
-						type: TypeName('Float')
+						type: TypeName('Float',false)
 					}])
 				}, {
 					key: 'v1',
 					opt: false,
-					type: TypeName('Int')
+					type: TypeName('Int',false)
 				}]
 			} })
 		}] }), r._getDispatchData() );
@@ -277,16 +306,16 @@ import mweb.internal.*;
 					type: AnonType([{
 						key: 'a1',
 						opt: false,
-						type: TypeName('Int')
+						type: TypeName('Int',false)
 					}, {
 						key: 'otherField',
 						opt: true,
-						type: TypeName('Float')
+						type: TypeName('Float',false)
 					}])
 				}, {
 					key: 'v1',
 					opt: false,
-					type: TypeName('Int')
+					type: TypeName('Int',false)
 				}]
 			} })
 		}] }), r._getDispatchData() );
@@ -320,15 +349,15 @@ import mweb.internal.*;
 			data: RouteFunc({ metas:[], addrArgs:[{
 				name:'a',
 				type:'Float',
-				many:false
+				opt:false, many:false
 			}, {
 				name:'c',
 				type:'String',
-				many:false
+				opt:false, many:false
 			}, {
 				name:'b',
 				type:'Int',
-				many:false
+				opt:false, many:false
 			}], args: null })
 		}, {
 			key: 'something',
@@ -339,11 +368,11 @@ import mweb.internal.*;
 				data:[{
 					key: 'i',
 					opt: false,
-					type: TypeName('Int')
+					type: TypeName('Int',false)
 				}, {
 					key: 'str',
 					opt: false,
-					type: TypeName('String')
+					type: TypeName('String',false)
 				}]
 			} })
 		}] }), r._getDispatchData() );
