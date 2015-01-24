@@ -18,12 +18,7 @@ import mweb.internal.Data;
 
 	override private function _getMapFunction():Null<Dynamic->To>
 	{
-		var lastMap = proxy._getMapFunction();
-		if (lastMap == null)
-			return mapFunction;
-
-		var mf = mapFunction;
-		return function(v:Dynamic) return mf(lastMap(v));
+		return mapFunction;
 	}
 
 	override private function _getDispatchData():DispatchData

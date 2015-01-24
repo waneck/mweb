@@ -68,12 +68,15 @@ private typedef K = String
 	{
 		var idx = firstIndex(key),
 		    len = this.length;
-		for(i in idx...len)
+		if (idx >= 0)
 		{
-			var val = this[i];
-			if (val.key != key)
-				break;
-			fn(val);
+			for(i in idx...len)
+			{
+				var val = this[i];
+				if (val.key != key)
+					break;
+				fn(val);
+			}
 		}
 	}
 

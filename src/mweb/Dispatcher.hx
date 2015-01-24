@@ -14,12 +14,15 @@ class Dispatcher<T>
 	private var args:Map<String,Array<String>>;
 	private var verb:String;
 
+	// private var routeStack:Array<Route<Dynamic>>;
+
 	private function new(request:HttpRequest)
 	{
 		this.request = request;
 		var uri = this.originalURI = request.getURI();
 		this.pieces = splitURI(uri);
 		this.verb = request.getMethod().toLowerCase();
+		// this.routeStack = [];
 
 		var args = this.args = new Map();
 		switch(verb)
@@ -90,13 +93,19 @@ class Dispatcher<T>
 	public function dispatch(route:Route<T>):T
 	{
 		var route:Route<Dynamic> = route;
-		var map = route._getMapFunction();
+		var maps = [];
+		{
+			var map = route._getMapFunction();
+			if (map != null)
+				maps.push(map);
+		}
 		var data = route._getDispatchData();
-		var subj = route._getSubject();
+		var subj:Dynamic = route._getSubject();
 		var pieces = pieces;
 
 		var lastUri = pieces[pieces.length-1];
 		var fields = [];
+		var ethis = subj;
 
 		while (true)
 		{
@@ -107,6 +116,33 @@ class Dispatcher<T>
 			switch (data)
 			{
 				case RouteObj(objData):
+					var n = pieces.pop();
+					lastUri = n;
+					var best = null;
+					objData.routes.forEachKey(n, function(route) {
+						if (route.verb == 'any' || route.verb == verb)
+						{
+							if (best == null || route.verb == verb)
+								best = route;
+						}
+					});
+					if (best == null)
+					{
+						objData.routes.forEachKey('default', function(route) {
+							if (route.verb == 'any' || route.verb == verb)
+							{
+								if (best == null || route.verb == verb)
+									best = route;
+							}
+						});
+					}
+
+					if (best == null)
+						throw new DispatcherError(lastUri, fields, NoRouteFound(n));
+
+					fields.push(best.name);
+					subj = Reflect.field(subj, best.name);
+					data = best.data;
 				case RouteFunc(fn):
 					if (!Reflect.isFunction(subj))
 						throw new DispatcherError(lastUri, fields, Internal(InvalidFunction(subj)));
@@ -139,14 +175,28 @@ class Dispatcher<T>
 
 					if (fn.args != null)
 					{
-						callArgs.push(buildArgs({ key:'', opt:fn.args.opt, type:AnonType(fn.args.data) }, ''));
+						callArgs.push(buildArgs({
+							key:'', opt:fn.args.opt, type:AnonType(fn.args.data)
+						}, '', new DispatcherError(lastUri, fields, null)));
 					}
+
+					var ret = Reflect.callMethod(ethis, subj, callArgs);
+					var i = maps.length;
+					while (i --> 0)
+					{
+						ret = maps[i](ret);
+					}
+					return ret;
 				case RouteCall:
 					if (!Std.is(subj, Route))
 						throw new DispatcherError(lastUri, fields, Internal(InvalidRoute(subj)));
 					route = cast subj;
 					subj = route._getSubject();
+					ethis = subj;
 					data = route._getDispatchData();
+					var map = route._getMapFunction();
+					if (map != null)
+						maps.push(map);
 			}
 		}
 		return null;
@@ -154,15 +204,62 @@ class Dispatcher<T>
 
 	private static var decoders(get,null):Map<String,Decoder<Dynamic>>;
 
-	private function buildArgs(arg:{ key:String, opt:Bool, type:CType }, prefix:String):Dynamic
+	private function buildArgs(arg:{ key:String, opt:Bool, type:CType }, prefix:String, err:DispatcherError):Dynamic
 	{
 		var name = prefix + arg.key;
 		switch(arg.type)
 		{
 			case TypeName(name,many):
-			case AnonType(names):
+				// var t = getDecoderFor(name)(cur);
+				var arg = this.args[name];
+				if (arg == null)
+					return null;
+				if (arg.length > 1 && !many)
+					throw err.withError(MultipleParamValues(name,arg));
+				if (many)
+				{
+					return [ for (arg in arg) {
+						var t = getDecoderFor(name)(arg);
+						if (t == null)
+							throw err.withError(InvalidArgumentType(arg,name));
+						t;
+					} ];
+				} else {
+					var t = getDecoderFor(name)(arg[0]);
+					if (t == null)
+						throw err.withError(InvalidArgumentType(arg[0],name));
+					return t;
+				}
+			case AnonType(fields):
+				var ret:Dynamic = {};
+				var hasValue = false;
+				var failedFields = [];
+
+				var prefix = name +'_';
+				for (field in fields)
+				{
+					var arg = buildArgs(field,prefix,err);
+					if (arg == null)
+					{
+						if (!field.opt)
+							failedFields.push(prefix + field.key);
+					} else {
+						hasValue = true;
+						Reflect.setField(ret, field.key, arg);
+					}
+				}
+
+				if (hasValue && failedFields.length > 0)
+					throw err.withError(MissingNonOptional(failedFields));
+				if (!hasValue)
+				{
+					if (arg.opt)
+						return null;
+					else
+						err.withError(MissingNonOptional([arg.key]));
+				}
+				return ret;
 		}
-		return null;
 	}
 
 	private static function getDecoderFor<T>(typeName:String):Null<String->T>

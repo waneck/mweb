@@ -13,6 +13,21 @@ enum DispatcherErrorType
 	InvalidArgumentType(contents:String, type:String);
 
 	/**
+		Thrown when there's more than one parameter with name `parameterName`,
+		and the `args` interface isn't typed as an Array
+	 **/
+	MultipleParamValues(parameterName:String,values:Array<String>);
+
+	/**
+		Thrown when the parameters with names `parameterNames` is missing
+	 **/
+	MissingNonOptional(parameterNames:Array<String>);
+
+	/**
+	 **/
+	NoRouteFound(uriPart:String);
+
+	/**
 		Errors not related to the user arguments
 	 **/
 	Internal(err:InternalError);
@@ -42,6 +57,11 @@ class DispatcherError
 		this.uriPart = uriPart;
 		this.fields = fields;
 		this.error = error;
+	}
+
+	public function withError(e:DispatcherErrorType)
+	{
+		return new DispatcherError(uriPart,fields,e);
 	}
 }
 
