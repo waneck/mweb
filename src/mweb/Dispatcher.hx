@@ -16,7 +16,7 @@ class Dispatcher<T>
 
 	// private var routeStack:Array<Route<Dynamic>>;
 
-	private function new(request:HttpRequest)
+	public function new(request:HttpRequest)
 	{
 		this.request = request;
 		var uri = this.originalURI = request.getURI();
@@ -24,13 +24,18 @@ class Dispatcher<T>
 		this.verb = request.getMethod().toLowerCase();
 		// this.routeStack = [];
 
-		var args = this.args = new Map();
-		switch(verb)
+		if (request.getParamsData != null)
 		{
-			case "get":
-				splitArgs( StringTools.replace(request.getParamsString(), ';', '&'), args );
-			case _:
-				splitArgs( request.getPostData(), args );
+			this.args = request.getParamsData();
+		} else {
+			var args = this.args = new Map();
+			switch(verb)
+			{
+				case "get":
+					splitArgs( StringTools.replace(request.getParamsString(), ';', '&'), args );
+				case _:
+					splitArgs( request.getPostData(), args );
+			}
 		}
 	}
 
@@ -135,6 +140,8 @@ class Dispatcher<T>
 									best = route;
 							}
 						});
+						if (best != null && n != null)
+							pieces.push(n);
 					}
 
 					if (best == null)
@@ -163,9 +170,10 @@ class Dispatcher<T>
 							{
 								if (!arg.opt)
 									throw new DispatcherError(lastUri, fields, MissingAddrArguments(arg.name));
-								argArray.push(null);
+								if (!arg.many)
+									argArray.push(null);
 							} else {
-									var t = getDecoderFor(arg.type)(cur);
+								var t = getDecoderFor(arg.type)(cur);
 								if (t == null)
 									throw new DispatcherError(lastUri, fields, InvalidArgumentType(cur,arg.type));
 								argArray.push(t);
@@ -186,6 +194,15 @@ class Dispatcher<T>
 					{
 						ret = maps[i](ret);
 					}
+
+					if (this.pieces.length > 0)
+					{
+						var p = pieces.copy();
+						p.reverse();
+
+						throw new DispatcherError(lastUri,fields,TooManyValues(p));
+					}
+
 					return ret;
 				case RouteCall:
 					if (!Std.is(subj, Route))
@@ -209,25 +226,27 @@ class Dispatcher<T>
 		var name = prefix + arg.key;
 		switch(arg.type)
 		{
-			case TypeName(name,many):
-				// var t = getDecoderFor(name)(cur);
-				var arg = this.args[name];
-				if (arg == null)
-					return null;
-				if (arg.length > 1 && !many)
-					throw err.withError(MultipleParamValues(name,arg));
+			case TypeName(tname,many):
+				var uarg = this.args[name];
+				if (uarg == null)
+					if (arg.opt && many)
+						return [];
+					else
+						return null;
+				if (uarg.length > 1 && !many)
+					throw err.withError(MultipleParamValues(name,uarg));
 				if (many)
 				{
-					return [ for (arg in arg) {
-						var t = getDecoderFor(name)(arg);
+					return [ for (arg in uarg) {
+						var t = getDecoderFor(tname)(arg);
 						if (t == null)
-							throw err.withError(InvalidArgumentType(arg,name));
+							throw err.withError(InvalidArgumentType(arg,tname));
 						t;
 					} ];
 				} else {
-					var t = getDecoderFor(name)(arg[0]);
+					var t = getDecoderFor(tname)(uarg[0]);
 					if (t == null)
-						throw err.withError(InvalidArgumentType(arg[0],name));
+						throw err.withError(InvalidArgumentType(uarg[0],tname));
 					return t;
 				}
 			case AnonType(fields):
@@ -235,7 +254,7 @@ class Dispatcher<T>
 				var hasValue = false;
 				var failedFields = [];
 
-				var prefix = name +'_';
+				var prefix = name == '' ? name : name +'_';
 				for (field in fields)
 				{
 					var arg = buildArgs(field,prefix,err);
@@ -250,13 +269,13 @@ class Dispatcher<T>
 				}
 
 				if (hasValue && failedFields.length > 0)
-					throw err.withError(MissingNonOptional(failedFields));
+					throw err.withError(MissingArgument(failedFields));
 				if (!hasValue)
 				{
 					if (arg.opt)
 						return null;
 					else
-						err.withError(MissingNonOptional([arg.key]));
+						err.withError(MissingArgument([arg.key]));
 				}
 				return ret;
 		}
@@ -302,9 +321,17 @@ class Dispatcher<T>
 		if (decoders == null)
 		{
 			decoders = [
-				"Int" => function(v) return Std.parseInt,
+				"Int" => function(v) return Std.parseInt(v),
 				"Float" => function(v):Null<Float> { var ret = Std.parseFloat(v); if (Math.isNaN(ret)) return null; return ret; },
 				"String" => function(s) return s,
+				"Bool" => function(s:String):Null<Bool> return switch(s.toLowerCase()) {
+					case "1" | "true" | "yes":
+						true;
+					case "0" | "false" | "no":
+						false;
+					case _:
+						null;
+				}
 			];
 			var meta = haxe.rtti.Meta.getType(Dispatcher);
 			if (meta != null && meta.abstractDefs != null)
@@ -314,7 +341,6 @@ class Dispatcher<T>
 				for (def in defs)
 				{
 					var name:String = def.name;
-					// trace(name);
 					if (def.fnName == null)
 					{
 						dec[name] = function(s:String) return s;

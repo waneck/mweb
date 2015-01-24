@@ -21,9 +21,15 @@ enum DispatcherErrorType
 	/**
 		Thrown when the parameters with names `parameterNames` is missing
 	 **/
-	MissingNonOptional(parameterNames:Array<String>);
+	MissingArgument(parameterNames:Array<String>);
 
 	/**
+		Thrown when there are extra URI parameters than consumed by the Dispatcher
+	 **/
+	TooManyValues(extra:Array<String>);
+
+	/**
+		Thrown when a route is not found
 	 **/
 	NoRouteFound(uriPart:String);
 
@@ -62,6 +68,11 @@ class DispatcherError
 	public function withError(e:DispatcherErrorType)
 	{
 		return new DispatcherError(uriPart,fields,e);
+	}
+
+	public function toString()
+	{
+		return 'Dispatcher error $error while processing $uriPart (${fields.join('->')})';
 	}
 }
 

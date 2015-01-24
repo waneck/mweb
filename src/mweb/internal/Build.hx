@@ -358,7 +358,9 @@ class Build
 			if (mainType != null)
 			{
 				var complex = mainType.toComplexType();
-				sw = macro ( $sw : $complex );
+				if (complex != null)
+					sw = macro ( $sw : $complex );
+				sw;
 			}
 
 			var t = typeof(sw);
@@ -586,41 +588,75 @@ class Build
 			}
 		}
 
+		var str = toDashSep(str).split('-');
+		switch(str[0])
+		{
+			case 'get' | 'post' | 'delete' | 'patch' | 'put' | 'any':
+				// valid verb
+				var v = str.shift();
+				if (verb != null && verb != v && v != 'any')
+					throw new Error('An explicit verb "$verb" was defined for field "$str", but its field already suggests the use of the incompatible verb "$v"', pos);
+				verb = v;
+			case _:
+				if (name == null) name = str.join('-');
+		}
+
+		if (name == null)
+			name = str.join('-');
+
+		// for (i in 1...str.length)
+		// {
+		// 	var code = str.charCodeAt(i);
+		// 	if (code >= 'A'.code && code <= 'Z'.code || i == (str.length - 1))
+		// 	{
+		// 		var isLast = !(code >= 'A'.code && code <= 'Z'.code);
+		// 		var v = isLast ? str : str.substr(0,i);
+		// 		switch(v)
+		// 		{
+		// 		}
+		// 		if (isLast)
+		// 			name = '';
+		// 		else if (name == null)
+		// 			name = str.charAt(i).toLowerCase() + str.substr(i+1);
+		// 		if (verb != null && verb != v && v != 'any')
+		// 			throw new Error('An explicit verb "$verb" was defined for field "$str", but its field already suggests the use of the incompatible verb "$v"', pos);
+		// 		verb = v;
+		// 	}
+		// }
+
 		switch(type)
 		{
 			case RouteFunc(_):
-				for (i in 1...str.length)
-				{
-					var code = str.charCodeAt(i);
-					if (code >= 'A'.code && code <= 'Z'.code || i == (str.length - 1))
-					{
-						var isLast = !(code >= 'A'.code && code <= 'Z'.code);
-						var v = isLast ? str : str.substr(0,i);
-						switch(v)
-						{
-							case 'get' | 'post' | 'delete' | 'patch' | 'put' | 'any':
-								// valid verb
-							case _:
-								if (name == null) name = str;
-								break;
-						}
-						if (isLast)
-							name = '';
-						else if (name == null)
-							name = str.charAt(i).toLowerCase() + str.substr(i+1);
-						if (verb != null && verb != v && v != 'any')
-							throw new Error('An explicit verb "$verb" was defined for field "$str", but its field already suggests the use of the incompatible verb "$v"', pos);
-						verb = v;
-					}
-				}
 			case _:
 				if (verb == null) verb = 'any';
-				name = str;
 		}
 
 		if (name == null || verb == null)
 			throw new Error('The route name "$str" doesn\'t start with the verb filter or the special "any" name. If it is not a route, use the metadata @:skip or make the function private to avoid this error.', pos);
 		return { name:name, verb:verb };
+	}
+
+	public static function toDashSep(s:String):String
+	{
+		if (s.length <= 1) return s; //allow upper-case aliases
+		var buf = new StringBuf();
+		var first = true;
+		for (i in 0...s.length)
+		{
+			var chr = s.charCodeAt(i);
+			if (chr >= 'A'.code && chr <= 'Z'.code)
+			{
+				if (!first)
+					buf.addChar('-'.code);
+				buf.addChar( chr - ('A'.code - 'a'.code) );
+				first = true;
+			} else {
+				buf.addChar(chr);
+				first = false;
+			}
+		}
+
+		return buf.toString();
 	}
 
 	private static function isInternalMeta(name:String)

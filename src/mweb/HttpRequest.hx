@@ -1,6 +1,6 @@
 package mweb;
 
-typedef HttpRequest = {
+typedef HttpRequestData = {
 	/**
 		Should return the method (verb) used by the request - values like GET/POST
 	 **/
@@ -23,4 +23,29 @@ typedef HttpRequest = {
 		an `InvalidRequest` error will be thrown
 	 **/
 	function getPostData():String;
+
+	@:optional function getParamsData():Map<String,Array<String>>;
+}
+
+@:forward abstract HttpRequest(HttpRequestData) from HttpRequestData
+{
+	@:extern inline public function new(data)
+	{
+		this = data;
+	}
+
+	public static function fromData(method:String, uri:String, params:Map<String,Array<String>>):HttpRequest
+	{
+		return {
+			getMethod:function() return method,
+			getURI:function() return uri,
+			getParamsString:function() return '',
+			getPostData:function() return '',
+			getParamsData:function() return params
+		}
+	}
+
+	public function withURI(uri:String)
+	{
+	}
 }
