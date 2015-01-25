@@ -1,4 +1,11 @@
 package mweb;
+#if neko
+import neko.Web;
+#elseif php
+import php.Web;
+#elseif (croxit_1)
+import croxit.Web;
+#end
 
 typedef HttpRequestData = {
 	/**
@@ -33,6 +40,20 @@ typedef HttpRequestData = {
 	{
 		this = data;
 	}
+
+#if (neko || php || croxit_1)
+	@:from inline public static function fromWeb(cls:Class<Web>):HttpRequest
+	{
+		// sadly we need this because of DCE
+		return {
+			getMethod:Web.getMethod,
+			getURI:Web.getURI,
+			getParamsString:Web.getParamsString,
+			getPostData:Web.getPostData,
+			getParamsData:null,
+		}
+	}
+#end
 
 	public static function fromData(method:String, uri:String, params:Map<String,Array<String>>):HttpRequest
 	{
