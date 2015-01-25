@@ -108,6 +108,16 @@ class TestDispatch
 		var r = route({ any: function(d:mweb.Dispatcher<Int>) { Assert.notNull(d); if (!Std.is(d,mweb.Dispatcher)) Assert.fail(); return 10; } });
 		dispatch('GET','/',new Map(),r);
 	}
+
+	public function testGetRoute()
+	{
+		var r = route({
+			root: new R1()
+		});
+		dispatch('GET','/root/test',new Map(),r);
+		dispatch('GET','/root/testing/r2/test',new Map(),r);
+		dispatch('GET','/root/testing/r2/r3/test',new Map(),r);
+	}
 }
 
 private class R1 extends Route<String>
