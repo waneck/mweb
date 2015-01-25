@@ -17,7 +17,7 @@ class Dispatcher<T>
 	public var request(default,null):HttpRequest;
 
 	/**
-		The current URI, with the processesd arguments taken off
+		The current URI, with the processed arguments taken off
 	 **/
 	public var uri(get,never):String;
 
@@ -35,7 +35,7 @@ class Dispatcher<T>
 	{
 		this.request = request;
 		var uri = request.getUri();
-		this.pieces = splitURI(uri);
+		this.pieces = splitUri(uri);
 		this.verb = request.getMethod().toLowerCase();
 		this.routeStack = [];
 		this.metaHandlers = [];
@@ -75,7 +75,7 @@ class Dispatcher<T>
 		}
 	}
 
-	private static function splitURI(uri:String)
+	private static function splitUri(uri:String)
 	{
 		var p = uri.split('/'),
 		    np = [];
@@ -85,7 +85,7 @@ class Dispatcher<T>
 			{
 				case '..':
 					if (np.length == 0)
-						throw InvalidURI(uri, "The URI goes beyond the server root");
+						throw InvalidUri(uri, "The URI goes beyond the server root");
 					np.pop();
 				case '.' | '':
 				case _:

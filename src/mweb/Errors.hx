@@ -85,5 +85,5 @@ enum DecoderError
 enum RequestError
 {
 	InvalidRequest(message:String);
-	InvalidURI(uri:String,message:String);
+	InvalidUri(uri:String,message:String);
 }

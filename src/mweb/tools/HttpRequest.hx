@@ -22,9 +22,9 @@ import croxit.Web;
 	}
 #end
 
-	public static function fromData(method:String, uri:String, params:Map<String,Array<String>>):HttpRequest
+	public static function fromData(method:String, uri:String, ?params:Map<String,Array<String>>):HttpRequest
 	{
-		return new HttpRequestStatic(method,uri,params);
+		return new HttpRequestStatic(method,uri,params == null ? new Map() : params);
 	}
 
 	public function withURI(uri:String)
