@@ -47,5 +47,12 @@ typedef HttpRequestData = {
 
 	public function withURI(uri:String)
 	{
+		return {
+			getMethod:this.getMethod,
+			getURI:function() return uri,
+			getParamsString:this.getParamsString,
+			getPostData:this.getPostData,
+			getParamsData:this.getParamsData
+		}
 	}
 }

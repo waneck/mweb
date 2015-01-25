@@ -23,7 +23,6 @@ class TestDispatch
 	public function testSimple()
 	{
 		var r = route({
-			any: function() return 'any',
 			getTest: function() return 'getTest',
 			postDefault: function(s:Int) { if(!Std.is(s,Int)) throw 'Invalid'; return 'postDefault (' + s + ')'; },
 			anyDefault: function() return 'anyDefault',
@@ -102,6 +101,64 @@ class TestDispatch
 		equals('5: hello 3 4.4 []', dispatch('GET','/args5/hello',[ "i" => ["3"], "o_f" => ["4.4"] ], r));
 		raises(function() dispatch('GET','/args4/hello',[ "i" => ["3"], "o_f" => ["4.4"] ], r), DispatcherError);
 	}
+
+	public function testDispatcherArgument()
+	{
+		typeError( route({ any: function(d:mweb.Dispatcher<Int>) return 'hi' }) );
+		var r = route({ any: function(d:mweb.Dispatcher<Int>) { Assert.notNull(d); if (!Std.is(d,mweb.Dispatcher)) Assert.fail(); return 10; } });
+		dispatch('GET','/',new Map(),r);
+	}
+}
+
+private class R1 extends Route<String>
+{
+	public var testing:{ r2:R2 };
+	public var r4 = new R4();
+
+	public function new()
+	{
+		super();
+		this.testing = { r2: new R2() };
+	}
+
+	public function anyTest(d:Dispatcher<String>)
+	{
+		Assert.notNull(d.getRoute(R1));
+		Assert.notNull(d.getRoute(R2));
+		Assert.notNull(d.getRoute(R4));
+
+		return 'hi';
+	}
+}
+
+private class R2 extends Route<String>
+{
+	public var r3 = new R3();
+
+	public function anyTest(d:Dispatcher<String>)
+	{
+		Assert.notNull(d.getRoute(R1));
+		Assert.notNull(d.getRoute(R3));
+		Assert.notNull(d.getRoute(R4));
+
+		return 'hi';
+	}
+}
+
+private class R3 extends Route<String>
+{
+	public function anyTest(d:Dispatcher<String>)
+	{
+		Assert.notNull(d.getRoute(R1));
+		Assert.notNull(d.getRoute(R2));
+		Assert.notNull(d.getRoute(R4));
+
+		return 'hi';
+	}
+}
+
+private class R4 extends Route<String>
+{
 }
 
 typedef Obj = { f:Float, ?s:Array<String> }

@@ -245,7 +245,7 @@ class Build
 		var name = typeName(type, pos);
 		switch(name)
 		{
-			case "Int" | "String" | "Float" | "Bool" | "Single":
+			case "Int" | "String" | "Float" | "Bool" | "Single" | "mweb.Dispatcher":
 				throw new Error('Cannot register decoder for basic type $name',pos);
 			case _:
 				typesWithDecoders[name] = true;
@@ -437,7 +437,7 @@ class Build
 	{
 		switch(follow(t))
 		{
-			case TFun(args,_):
+			case TFun(args,tret):
 				var i = 0,
 				    addr = [],
 						argdef = null;
@@ -463,16 +463,35 @@ class Build
 									throw new Error('The type of the special argument "args" must be an anonymous type',pos);
 							}
 						case _:
-							switch (follow(arg.t))
+							var t = null;
+							var many = switch (follow(arg.t))
 							{
-								case TInst(_.get() => { pack:[], name:'Array' }, [t]):
+								case TInst(_.get() => { pack:[], name:'Array' }, [tt]):
+									t = tt;
 									if (i == args.length || (i == args.length - 1 && args[i].name == 'args'))
-										addr.push({ name:arg.name, type:typeName(t, pos), many:true, opt:opt });
+										true;
 									else
 										throw new Error('Array types must be the last parameter before "args" on address arguments', pos);
-								case t:
-									addr.push({ name:arg.name, type: typeName(t, pos), many:false, opt:opt });
+								case tt:
+									t = tt;
+									false;
 							}
+							var type = typeName(t,pos);
+							switch [ many, type ]
+							{
+								case [ false, "mweb.Dispatcher" ]:
+									switch(follow(t))
+									{
+										case TInst(_,[t]):
+											if (!unify(t,tret))
+												throw new Error("The Dispatcher argument must be of the same generic type as the Route: $t2 should be $t",pos);
+										case _: throw 'assert';
+									}
+								case [ true, "mweb.Dispatcher" ]:
+									throw new Error("Cannot use Array<mweb.Dispatcher>", pos);
+								case _:
+							}
+							addr.push({ name:arg.name, type:type, many:many, opt:opt });
 					}
 				}
 				return { metas: [ for (m in metas) if (!isInternalMeta(m.name)) m.name ], addrArgs:addr, args: argdef };
@@ -528,6 +547,7 @@ class Build
 				switch(ret)
 				{
 					case "String":
+					case "mweb.Dispatcher":
 					case _:
 						reg(ret);
 				}

@@ -408,6 +408,12 @@ import mweb.internal.*;
 		typeEq( ( route( { any: function() return 1, anySomething: function() return "ohai" } ) : Route<Dynamic> ), ( null : Route<Dynamic> ) );
 		typeEq( ( route( { any: function() return 1, anySomething: function() return "ohai" } ) : Dynamic ), ( null : Dynamic ) );
 	}
+
+	public function testDispatcherArgument()
+	{
+		typeError( route({ any: function(d:mweb.Dispatcher<Int>) return 'hi' }) );
+		route({ any: function(d:mweb.Dispatcher<Int>) return 10 });
+	}
 }
 
 typedef Something = { i:Int };

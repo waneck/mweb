@@ -14,7 +14,7 @@ class Dispatcher<T>
 	private var args:Map<String,Array<String>>;
 	private var verb:String;
 
-	// private var routeStack:Array<Route<Dynamic>>;
+	private var routeStack:Array<Route<Dynamic>>;
 
 	public function new(request:HttpRequest)
 	{
@@ -22,7 +22,7 @@ class Dispatcher<T>
 		var uri = this.originalURI = request.getURI();
 		this.pieces = splitURI(uri);
 		this.verb = request.getMethod().toLowerCase();
-		// this.routeStack = [];
+		this.routeStack = [];
 
 		if (request.getParamsData != null)
 		{
@@ -97,6 +97,35 @@ class Dispatcher<T>
 
 	public function dispatch(route:Route<T>):T
 	{
+		var last = this.routeStack;
+		this.routeStack = last.copy();
+		try
+		{
+			var ret = _dispatch(route);
+			this.routeStack = last;
+			return ret;
+		}
+
+		catch(e:Dynamic)
+		{
+			this.routeStack = last;
+#if neko
+			neko.Lib.rethrow(e);
+#elseif cpp
+			cpp.Lib.rethrow(e);
+#elseif java
+			java.Lib.rethrow(e);
+#elseif cs
+			cs.Lib.rethrow(e);
+#else
+			throw e;
+#end
+		}
+		return null;
+	}
+
+	private function _dispatch(route:Route<T>):T
+	{
 		var route:Route<Dynamic> = route;
 		var maps = [];
 		{
@@ -104,6 +133,9 @@ class Dispatcher<T>
 			if (map != null)
 				maps.push(map);
 		}
+
+		var rstack = this.routeStack;
+		rstack.push(route);
 		var data = route._getDispatchData();
 		var subj:Dynamic = route._getSubject();
 		var pieces = pieces;
@@ -122,6 +154,10 @@ class Dispatcher<T>
 			{
 				case RouteObj(objData):
 					var n = pieces.pop();
+					var wasNull = n == null;
+					if (wasNull)
+						n = '';
+
 					lastUri = n;
 					var best = null;
 					objData.routes.forEachKey(n, function(route) {
@@ -140,7 +176,7 @@ class Dispatcher<T>
 									best = route;
 							}
 						});
-						if (best != null && n != null)
+						if (best != null && n != null && !wasNull)
 							pieces.push(n);
 					}
 
@@ -165,6 +201,12 @@ class Dispatcher<T>
 
 						do
 						{
+							if (arg.type == 'mweb.Dispatcher')
+							{
+								argArray.push(this);
+								break;
+							}
+
 							cur = pieces.pop();
 							if (cur == null)
 							{
@@ -208,6 +250,8 @@ class Dispatcher<T>
 					if (!Std.is(subj, Route))
 						throw new DispatcherError(lastUri, fields, Internal(InvalidRoute(subj)));
 					route = cast subj;
+					rstack.push(route);
+
 					subj = route._getSubject();
 					ethis = subj;
 					data = route._getDispatchData();
@@ -366,9 +410,47 @@ class Dispatcher<T>
 		decoders.set(name,d);
 	}
 
-	// public function getRoute<T : Route>(t:Class<T>):Opt<T>
-	// {
-	// }
+	public function getRoute<T : Route<Dynamic>>(t:Class<T>):Null<T>
+	{
+		var rstack = this.routeStack,
+		    i = rstack.length;
+
+		while (i --> 0)
+		{
+			var route = rstack[i];
+			if (Std.is(route,t))
+				return cast route;
+			var data = route._getDispatchData();
+			var ret = traverseRoute(route,data,t);
+			if (ret != null) return ret;
+		}
+		return null;
+	}
+
+	private static function traverseRoute<T : Route<Dynamic>>(ethis:Dynamic, data:DispatchData, type:Class<T>)
+	{
+		switch(data)
+		{
+			case RouteCall:
+				if (Std.is(ethis,type))
+					return ethis;
+			case RouteFunc(_):
+				return null;
+			case RouteObj(data):
+				for (route in data.routes)
+				{
+					switch(route.data)
+					{
+						case RouteObj(_) | RouteCall:
+							var ret = traverseRoute(Reflect.field(ethis,route.name), route.data, type);
+							if (ret != null)
+								return ret;
+						case _:
+					}
+				}
+		}
+		return null;
+	}
 #end
 
 	/**
