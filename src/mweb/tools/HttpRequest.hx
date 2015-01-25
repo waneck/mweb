@@ -7,7 +7,7 @@ import php.Web;
 import croxit.Web;
 #end
 
-@:forward abstract HttpRequest(HttpRequestData) from HttpRequestData
+@:forward abstract HttpRequest(IHttpRequestData) from IHttpRequestData
 {
 	@:extern inline public function new(data)
 	{
@@ -31,37 +31,8 @@ import croxit.Web;
 	{
 		return new HttpRequestStatic(this.getMethod(),uri,this.getParamsData());
 	}
-}
 
-class HttpRequestData
-{
-	/**
-		Should return the method (verb) used by the request - values like GET/POST
-	 **/
-	public function getMethod():String
-	{
-		return throw 'not implemented';
-	}
-
-	/**
-		Should return the URI queried by the HTTP request
-	 **/
-	public function getUri():String
-	{
-		return throw 'not implemented';
-	}
-
-	/**
-		Should return a String containing the parameters.
-		It is advised that as a security measure on a non-GET request, only the parameters passed
-		through the body of the message are sent here.
-	 **/
-	public function getParamsData():Map<String,Array<String>>
-	{
-		return throw 'not implemented';
-	}
-
-	private static function splitArgs(data:String, into:Map<String,Array<String>>)
+	@:allow(mweb.tools) static function splitArgs(data:String, into:Map<String,Array<String>>)
 	{
 		if (data == null || data.length == 0)
 			return;
@@ -82,7 +53,27 @@ class HttpRequestData
 	}
 }
 
-class HttpRequestStatic extends HttpRequestData
+interface IHttpRequestData
+{
+	/**
+		Should return the method (verb) used by the request - values like GET/POST
+	 **/
+	public function getMethod():String;
+
+	/**
+		Should return the URI queried by the HTTP request
+	 **/
+	public function getUri():String;
+
+	/**
+		Should return a String containing the parameters.
+		It is advised that as a security measure on a non-GET request, only the parameters passed
+		through the body of the message are sent here.
+	 **/
+	public function getParamsData():Map<String,Array<String>>;
+}
+
+class HttpRequestStatic implements IHttpRequestData
 {
 	var method:String;
 	var uri:String;
@@ -98,7 +89,7 @@ class HttpRequestStatic extends HttpRequestData
 	/**
 		Should return the method (verb) used by the request - values like GET/POST
 	 **/
-	override public function getMethod():String
+	public function getMethod():String
 	{
 		return method;
 	}
@@ -106,7 +97,7 @@ class HttpRequestStatic extends HttpRequestData
 	/**
 		Should return the URI queried by the HTTP request
 	 **/
-	override public function getUri():String
+	public function getUri():String
 	{
 		return uri;
 	}
@@ -116,30 +107,30 @@ class HttpRequestStatic extends HttpRequestData
 		It is advised that as a security measure on a non-GET request, only the parameters passed
 		through the body of the message are sent here.
 	 **/
-	override public function getParamsData():Map<String,Array<String>>
+	public function getParamsData():Map<String,Array<String>>
 	{
 		return params;
 	}
 }
 
 #if (neko || php || croxit_1)
-private class NekoWebRequest extends HttpRequestData
+private class NekoWebRequest implements IHttpRequestData
 {
 	public function new()
 	{
 	}
 
-	override public function getMethod():String
+	public function getMethod():String
 	{
 		return Web.getMethod();
 	}
 
-	override public function getUri():String
+	public function getUri():String
 	{
 		return Web.getURI();
 	}
 
-	override public function getParamsData():Map<String,Array<String>>
+	public function getParamsData():Map<String,Array<String>>
 	{
 		var verb = Web.getMethod();
 		var args = new Map();
@@ -147,9 +138,9 @@ private class NekoWebRequest extends HttpRequestData
 		switch(verb)
 		{
 			case "get":
-				HttpRequestData.splitArgs( StringTools.replace(Web.getParamsString(), ';', '&'), args );
+				HttpRequest.splitArgs( StringTools.replace(Web.getParamsString(), ';', '&'), args );
 			case _:
-				HttpRequestData.splitArgs( Web.getPostData(), args );
+				HttpRequest.splitArgs( Web.getPostData(), args );
 		}
 
 		return args;

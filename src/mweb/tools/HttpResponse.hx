@@ -1,6 +1,9 @@
 package mweb.tools;
 using StringTools;
 
+/**
+	The HttpResponse class can be used
+ **/
 @:forward abstract HttpResponse<T>(HttpResponseData<T>) from HttpResponseData<T>
 {
 	@:extern inline public function new()
@@ -12,6 +15,9 @@ using StringTools;
 	{
 		return new HttpResponseData().setContent(data);
 	}
+
+	@:extern inline public static function empty()
+		return new HttpResponse();
 }
 
 class HttpResponseData<T>
@@ -19,7 +25,7 @@ class HttpResponseData<T>
 	public var response(default,null):HttpResponseState<T>;
 	public var status(default,null):HttpStatus;
 	public var headers(default,null):Array<{ key:String, value:String }>;
-	public var cookies(default,null):Map<String, { value:String, options:Array<String> }>;
+	public var cookies(default,null):Map<String, { key:String, value:String, options:Array<String> }>;
 
 	public function new()
 	{
@@ -48,7 +54,7 @@ class HttpResponseData<T>
 				}
 				if (hasOpt || r.length == 0)
 				{
-					cookies[key] = { value:r.shift(), options:r };
+					cookies[key] = { key:key, value:r.shift(), options:r };
 				} else {
 					r.push('$key=$value');
 					for (val in r)
@@ -56,7 +62,7 @@ class HttpResponseData<T>
 						var ei = val.indexOf('=');
 						var key = val.substr(0,ei),
 								value = val.substr(ei+1);
-						cookies[key] = { value:value, options:null };
+						cookies[key] = { key:key, value:value, options:null };
 					}
 				}
 			case 'location':
@@ -69,7 +75,7 @@ class HttpResponseData<T>
 
 	public function setCookie(name:String, value:String, ?options:Array<String>)
 	{
-		cookies[name] = { value:value, options:options };
+		cookies[name] = { key:name, value:value, options:options };
 		return this;
 	}
 
