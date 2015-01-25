@@ -117,6 +117,10 @@ class TestDispatch
 		dispatch('GET','/root/test',new Map(),r);
 		dispatch('GET','/root/testing/r2/test',new Map(),r);
 		dispatch('GET','/root/testing/r2/r3/test',new Map(),r);
+
+		dispatch('GET','/test',new Map(),new R1());
+		dispatch('GET','/testing/r2/test',new Map(),new R1());
+		dispatch('GET','/testing/r2/r3/test',new Map(),new R1());
 	}
 }
 
