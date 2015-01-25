@@ -3,11 +3,20 @@ import mweb.internal.Data;
 import mweb.internal.*;
 import mweb.Errors;
 
+/**
+	A Dispatcher does the dynamic dispatch from an HTTP Request, guided by a `mweb.Route`.
+	The type parameter of the Dispatcher relates to the return type of the routes' functions. It may be `Void`
+ **/
 class Dispatcher<T>
 {
 #if !macro
+	/**
+		The original Http Request
+	 **/
 	public var request(default,null):HttpRequest;
-	public var originalURI(default,null):String;
+	/**
+		The current URI, with the processesd arguments taken off
+	 **/
 	public var uri(get,never):String;
 
 	private var pieces:Array<String>;
@@ -15,14 +24,19 @@ class Dispatcher<T>
 	private var verb:String;
 
 	private var routeStack:Array<Route<Dynamic>>;
+	private var metaHandlers:Array<Array<String>->Void>;
 
+	/**
+		Creates a new Dispatcher class from an HTTP Request. See `mweb.HttpRequest`
+	 **/
 	public function new(request:HttpRequest)
 	{
 		this.request = request;
-		var uri = this.originalURI = request.getURI();
+		var uri = request.getURI();
 		this.pieces = splitURI(uri);
 		this.verb = request.getMethod().toLowerCase();
 		this.routeStack = [];
+		this.metaHandlers = [];
 
 		if (request.getParamsData != null)
 		{
@@ -37,6 +51,19 @@ class Dispatcher<T>
 					splitArgs( request.getPostData(), args );
 			}
 		}
+	}
+
+	/**
+		Adds a function that is called with all the metadata of the function to be called by the dispatcher.
+	 **/
+	public function addMetaHandler(handler:Array<String>->Void):Void->Void
+	{
+		if (metaHandlers.indexOf(handler) < 0)
+		{
+			metaHandlers.push(handler);
+		}
+
+		return function() metaHandlers.remove(handler);
 	}
 
 	private static function splitArgs(data:String, into:Map<String,Array<String>>)
@@ -95,6 +122,9 @@ class Dispatcher<T>
 		return ret.toString();
 	}
 
+	/**
+		Dispatches the current HTTP request to the associated function that is specified to deal with thati through `route`
+	 **/
 	public function dispatch(route:Route<T>):T
 	{
 		var last = this.routeStack;
@@ -228,6 +258,11 @@ class Dispatcher<T>
 						callArgs.push(buildArgs({
 							key:'', opt:fn.args.opt, type:AnonType(fn.args.data)
 						}, '', new DispatcherError(lastUri, fields, null)));
+					}
+
+					for (handler in this.metaHandlers)
+					{
+						handler(fn.metas);
 					}
 
 					var ret = Reflect.callMethod(ethis, subj, callArgs);
@@ -405,11 +440,18 @@ class Dispatcher<T>
 		return decoders;
 	}
 
+	/**
+		The dynamic (non-macro) version of `addDecoder`. Use of `addDecoder` is advised in order to take advatange of the
+		compile-time checking if all arguments used have their appropriate decoders associated.
+	 **/
 	public static function addDecoderRuntime<T>(name:String, d:Decoder<T>):Void
 	{
 		decoders.set(name,d);
 	}
 
+	/**
+		Gets a route from the current dispatching Route.
+	 **/
 	public function getRoute<T : Route<Dynamic>>(t:Class<T>):Null<T>
 	{
 		var rstack = this.routeStack,
@@ -427,7 +469,7 @@ class Dispatcher<T>
 		return null;
 	}
 
-	private static function traverseRoute<T : Route<Dynamic>>(ethis:Dynamic, data:DispatchData, type:Class<T>)
+	private static function traverseRoute<T : Route<Dynamic>>(ethis:Dynamic, data:DispatchData, type:Class<T>):Null<T>
 	{
 		switch(data)
 		{

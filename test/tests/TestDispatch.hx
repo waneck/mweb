@@ -22,7 +22,7 @@ class TestDispatch
 
 	public function testSimple()
 	{
-		var r = route({
+		var r = anon({
 			getTest: function() return 'getTest',
 			postDefault: function(s:Int) { if(!Std.is(s,Int)) throw 'Invalid'; return 'postDefault (' + s + ')'; },
 			anyDefault: function() return 'anyDefault',
@@ -44,7 +44,7 @@ class TestDispatch
 		Assert.raises(function() dispatch('POST','/',new Map(),r), DispatcherError);
 
 		//map
-		var r2 = route({
+		var r2 = anon({
 			anyDefault: r.map(function(s) return '1-$s').map(function(s) return '2-$s').map(function(s) return '3-$s')
 		}).map(function(s) return 'end-$s');
 
@@ -54,7 +54,7 @@ class TestDispatch
 
 	public function testAddrArgs()
 	{
-		var r = route({
+		var r = anon({
 			anySimple: function(s:String) return 'anySimple $s',
 			anyWithMany: function(f:Float, last:Array<Int>) {
 				if (!Std.is(f,Float)) throw 'assert';
@@ -78,7 +78,7 @@ class TestDispatch
 
 	public function testArgs()
 	{
-		var r = route({
+		var r = anon({
 			anyArgs1: function(s:String, args:{ i:Int, o: { f:Float } })
 				return '1: $s ${args.i} ${args.o.f}',
 			anyArgs2: function(s:String, args:{ i:Int, ?o: { f:Float, s:String } })
@@ -104,14 +104,14 @@ class TestDispatch
 
 	public function testDispatcherArgument()
 	{
-		typeError( route({ any: function(d:mweb.Dispatcher<Int>) return 'hi' }) );
-		var r = route({ any: function(d:mweb.Dispatcher<Int>) { Assert.notNull(d); if (!Std.is(d,mweb.Dispatcher)) Assert.fail(); return 10; } });
+		typeError( anon({ any: function(d:mweb.Dispatcher<Int>) return 'hi' }) );
+		var r = anon({ any: function(d:mweb.Dispatcher<Int>) { Assert.notNull(d); if (!Std.is(d,mweb.Dispatcher)) Assert.fail(); return 10; } });
 		dispatch('GET','/',new Map(),r);
 	}
 
 	public function testGetRoute()
 	{
-		var r = route({
+		var r = anon({
 			root: new R1()
 		});
 		dispatch('GET','/root/test',new Map(),r);

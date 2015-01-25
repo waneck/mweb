@@ -16,14 +16,14 @@ import mweb.internal.*;
 
 	public function testBasicAnon()
 	{
-		var r = route({});
+		var r = anon({});
 		Assert.same( RouteObj({ routes:[] }), r._getDispatchData() );
 
 		// skip
-		var r = route({ a: @:skip 'test' });
+		var r = anon({ a: @:skip 'test' });
 		Assert.same( RouteObj({ routes:[] }), r._getDispatchData() );
 
-		var r = route({ any: function() {} });
+		var r = anon({ any: function() {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'any',
@@ -31,7 +31,7 @@ import mweb.internal.*;
 			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}] }), r._getDispatchData() );
 
-		var r = route({ any: @someMeta function() {} });
+		var r = anon({ any: @someMeta function() {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'any',
@@ -39,7 +39,7 @@ import mweb.internal.*;
 			data: RouteFunc({ metas:['someMeta'], addrArgs:[], args: null })
 		}] }), r._getDispatchData() );
 
-		// var r = route({ something: @:verb(get) function() {} });
+		// var r = anon({ something: @:verb(get) function() {} });
 		// Assert.same( RouteObj({ routes: [{
 		// 	key: 'something',
 		// 	verb: 'get',
@@ -47,7 +47,7 @@ import mweb.internal.*;
 		// 	data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		// }] }), r._getDispatchData() );
 
-		var r = route({ anyTest: function() {} });
+		var r = anon({ anyTest: function() {} });
 		Assert.same( RouteObj({ routes: [{
 			key: 'test',
 			verb: 'any',
@@ -55,7 +55,7 @@ import mweb.internal.*;
 			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}] }), r._getDispatchData() );
 
-		var r = route({ anyTest: function() {}, getOther: function() {} });
+		var r = anon({ anyTest: function() {}, getOther: function() {} });
 		Assert.same( RouteObj({ routes: [{
 			key: 'other',
 			verb: 'get',
@@ -68,24 +68,7 @@ import mweb.internal.*;
 			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}] }), r._getDispatchData() );
 
-		var r = route({ anyTest: function() {}, getOther: function() {}, something: {} });
-		Assert.same( RouteObj({ routes: [{
-			key: 'other',
-			verb: 'get',
-			name: 'getOther',
-			data: RouteFunc({ metas:[], addrArgs:[], args: null })
-		}, {
-			key: 'something',
-			verb: 'any',
-			name: 'something',
-			data: RouteObj({ routes: [] })
-		}, {
-			key: 'test',
-			verb: 'any',
-			name: 'anyTest',
-			data: RouteFunc({ metas:[], addrArgs:[], args: null })
-		}] }), r._getDispatchData() );
-		var r = route({ anyTest: function() {}, something: {}, getOther: function() {} });
+		var r = anon({ anyTest: function() {}, getOther: function() {}, something: {} });
 		Assert.same( RouteObj({ routes: [{
 			key: 'other',
 			verb: 'get',
@@ -102,8 +85,25 @@ import mweb.internal.*;
 			name: 'anyTest',
 			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}] }), r._getDispatchData() );
+		var r = anon({ anyTest: function() {}, something: {}, getOther: function() {} });
+		Assert.same( RouteObj({ routes: [{
+			key: 'other',
+			verb: 'get',
+			name: 'getOther',
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
+		}, {
+			key: 'something',
+			verb: 'any',
+			name: 'something',
+			data: RouteObj({ routes: [] })
+		}, {
+			key: 'test',
+			verb: 'any',
+			name: 'anyTest',
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
+		}] }), r._getDispatchData() );
 
-		var r = route({ anyTest: function() {}, getOther: function() {}, something: new RouteDef1() });
+		var r = anon({ anyTest: function() {}, getOther: function() {}, something: new RouteDef1() });
 		Assert.same( RouteObj({ routes: [{
 			key: 'other',
 			verb: 'get',
@@ -123,14 +123,14 @@ import mweb.internal.*;
 
 
 		// for now, reserved metadata
-		typeError( route({ getSomething: @:verb(get) function() {} }) );
+		typeError( anon({ getSomething: @:verb(get) function() {} }) );
 		// this should fail even if we do allow @:verb in the end
-		typeError( route({ getSomething: @:verb(delete) function() {} }) );
+		typeError( anon({ getSomething: @:verb(delete) function() {} }) );
 	}
 
 	public function testAddrArgs()
 	{
-		var r = route({ any: function(i1:Int) {} });
+		var r = anon({ any: function(i1:Int) {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'any',
@@ -139,7 +139,7 @@ import mweb.internal.*;
 		}] }), r._getDispatchData() );
 
 		//inferred
-		var r = route({ any: function(i1) { i1 += 10; } });
+		var r = anon({ any: function(i1) { i1 += 10; } });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'any',
@@ -148,14 +148,14 @@ import mweb.internal.*;
 		}] }), r._getDispatchData() );
 
 		//optional
-		var r = route({ any: function(?i1) { i1 += 10; } });
+		var r = anon({ any: function(?i1) { i1 += 10; } });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'any',
 			name: 'any',
 			data: RouteFunc({ metas:[], addrArgs:[{ name:'i1', type:'Int', opt:true, many:false }], args: null })
 		}] }), r._getDispatchData() );
-		var r = route({ any: function(i1=10) {} });
+		var r = anon({ any: function(i1=10) {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'any',
@@ -163,14 +163,14 @@ import mweb.internal.*;
 			data: RouteFunc({ metas:[], addrArgs:[{ name:'i1', type:'Int', opt:true, many:false }], args: null })
 		}] }), r._getDispatchData() );
 
-		var r = route({ any: function(i1:Int, a1:String) {} });
+		var r = anon({ any: function(i1:Int, a1:String) {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'any',
 			name: 'any',
 			data: RouteFunc({ metas:[], addrArgs:[{ name:'i1', type:'Int', opt:false, many:false }, { name:'a1', type:'String', opt:false, many:false }], args: null })
 		}] }), r._getDispatchData() );
-		var r = route({ any: function(i1:Int, a1:SomeAbstract, z1:String) {} });
+		var r = anon({ any: function(i1:Int, a1:SomeAbstract, z1:String) {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'any',
@@ -182,7 +182,7 @@ import mweb.internal.*;
 			], args: null })
 		}] }), r._getDispatchData() );
 
-		var r = route({ any: function(a1:Int, a2:String, a3:Int, a4:Array<String>) {} });
+		var r = anon({ any: function(a1:Int, a2:String, a3:Int, a4:Array<String>) {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'any',
@@ -195,7 +195,7 @@ import mweb.internal.*;
 			], args: null })
 		}] }), r._getDispatchData() );
 
-		var r = route({ any: function(a1:Int, a2:String, a3:Int, a4:Array<String>, ?args:{}) {} });
+		var r = anon({ any: function(a1:Int, a2:String, a3:Int, a4:Array<String>, ?args:{}) {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'any',
@@ -209,12 +209,12 @@ import mweb.internal.*;
 		}] }), r._getDispatchData() );
 
 		// not supported
-		typeError( route({ any: function(a:{ something:Int }) {} }) );
+		typeError( anon({ any: function(a:{ something:Int }) {} }) );
 	}
 
 	public function testArgs()
 	{
-		var r = route({ post: function(args:{ v1:Int, a1:String }) {} });
+		var r = anon({ post: function(args:{ v1:Int, a1:String }) {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'post',
@@ -233,7 +233,7 @@ import mweb.internal.*;
 			} })
 		}] }), r._getDispatchData() );
 
-		var r = route({ post: function(?args:{ a1:String }) {} });
+		var r = anon({ post: function(?args:{ a1:String }) {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'post',
@@ -247,7 +247,7 @@ import mweb.internal.*;
 				}]
 			} })
 		}] }), r._getDispatchData() );
-		var r = route({ post: function(args:{ v1:Int, ?a1:String }) {} });
+		var r = anon({ post: function(args:{ v1:Int, ?a1:String }) {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'post',
@@ -266,7 +266,7 @@ import mweb.internal.*;
 			} })
 		}] }), r._getDispatchData() );
 
-		var r = route({ post: function(args:{ v1:Int, ?a1:{ otherField: Float, a1:Int } }) {} });
+		var r = anon({ post: function(args:{ v1:Int, ?a1:{ otherField: Float, a1:Int } }) {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'post',
@@ -293,7 +293,7 @@ import mweb.internal.*;
 			} })
 		}] }), r._getDispatchData() );
 
-		var r = route({ post: function(args:{ v1:Int, a1:{ ?otherField: Float, a1:Int } }) {} });
+		var r = anon({ post: function(args:{ v1:Int, a1:{ ?otherField: Float, a1:Int } }) {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
 			verb: 'post',
@@ -380,39 +380,39 @@ import mweb.internal.*;
 
 	public function testExpectedFailures()
 	{
-		typeError(route( { any: function(a:Int->Void) {} } ));
-		typeError(route( { any: function(a:{}) {} } ));
-		typeError(route( { any: function(args:Int->Void) {} } ));
-		typeError(route( { any: function(args:{ arg1:Int->Void }) {} } ));
-		typeError(route( { any: function(a:Dynamic) {} } ));
-		typeError(route( { any: function(a:InexistantType) {} } ));
-		typeError(route( { any: function(a:{ > Something, x: Int }) {} } ));
+		typeError(anon( { any: function(a:Int->Void) {} } ));
+		typeError(anon( { any: function(a:{}) {} } ));
+		typeError(anon( { any: function(args:Int->Void) {} } ));
+		typeError(anon( { any: function(args:{ arg1:Int->Void }) {} } ));
+		typeError(anon( { any: function(a:Dynamic) {} } ));
+		typeError(anon( { any: function(a:InexistantType) {} } ));
+		typeError(anon( { any: function(a:{ > Something, x: Int }) {} } ));
 	}
 
 	public function testRouteType()
 	{
-		typeEq( route({ any: function() return "ohai" }), ( null : AnonRoute<String> ) );
-		typeEq( route({ any: function() return "ohai", anyTest:function() return "hello" }), ( null : AnonRoute<String> ) );
-		typeEq( route({ any: function() return 1 }), ( null : AnonRoute<Int> ) );
-		typeEq( route({ any: function() return 1, anyTest: function() return 10 }), ( null : AnonRoute<Int> ) );
-		typeError( route({ any: function() return 1, anySomething: function() return "ohai" }) );
-		typeEq( route({ any: function() return "ohai", something: new StrRoute()  }), ( null : AnonRoute<String> ) );
-		typeError( route({ any: function() return 1, something: new StrRoute() }) );
-		typeEq( route({ any: function() return "ohai", something: {}  }), ( null : AnonRoute<String> ) );
+		typeEq( anon({ any: function() return "ohai" }), ( null : AnonRoute<String> ) );
+		typeEq( anon({ any: function() return "ohai", anyTest:function() return "hello" }), ( null : AnonRoute<String> ) );
+		typeEq( anon({ any: function() return 1 }), ( null : AnonRoute<Int> ) );
+		typeEq( anon({ any: function() return 1, anyTest: function() return 10 }), ( null : AnonRoute<Int> ) );
+		typeError( anon({ any: function() return 1, anySomething: function() return "ohai" }) );
+		typeEq( anon({ any: function() return "ohai", something: new StrRoute()  }), ( null : AnonRoute<String> ) );
+		typeError( anon({ any: function() return 1, something: new StrRoute() }) );
+		typeEq( anon({ any: function() return "ohai", something: {}  }), ( null : AnonRoute<String> ) );
 
 		//map
-		typeEq( route({ any: function() return 10, something: (new StrRoute()).map(function(str) return Std.parseInt(str)) }), ( null : AnonRoute<Int> ) );
-		typeError( route({ any: function() return 10, something: (new StrRoute()).map(function(str) return str) }) );
+		typeEq( anon({ any: function() return 10, something: (new StrRoute()).map(function(str) return Std.parseInt(str)) }), ( null : AnonRoute<Int> ) );
+		typeError( anon({ any: function() return 10, something: (new StrRoute()).map(function(str) return str) }) );
 
-		typeEq( route({ any: function() return 1, anySomething: function() return "ohai" }, true), ( null : AnonRoute<Dynamic> ) );
-		typeEq( ( route( { any: function() return 1, anySomething: function() return "ohai" } ) : Route<Dynamic> ), ( null : Route<Dynamic> ) );
-		typeEq( ( route( { any: function() return 1, anySomething: function() return "ohai" } ) : Dynamic ), ( null : Dynamic ) );
+		typeEq( anon({ any: function() return 1, anySomething: function() return "ohai" }, true), ( null : AnonRoute<Dynamic> ) );
+		typeEq( ( anon( { any: function() return 1, anySomething: function() return "ohai" } ) : Route<Dynamic> ), ( null : Route<Dynamic> ) );
+		typeEq( ( anon( { any: function() return 1, anySomething: function() return "ohai" } ) : Dynamic ), ( null : Dynamic ) );
 	}
 
 	public function testDispatcherArgument()
 	{
-		typeError( route({ any: function(d:mweb.Dispatcher<Int>) return 'hi' }) );
-		route({ any: function(d:mweb.Dispatcher<Int>) return 10 });
+		typeError( anon({ any: function(d:mweb.Dispatcher<Int>) return 'hi' }) );
+		anon({ any: function(d:mweb.Dispatcher<Int>) return 10 });
 	}
 }
 

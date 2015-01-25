@@ -18,7 +18,7 @@ import mweb.internal.*;
 	public function testAbstracts()
 	{
 		// make sure they are used
-		var r = route({ any: function(a:HasFromString,b:FromStringMeta,c:FromStringField,d:FromStringBoth) {} });
+		var r = anon({ any: function(a:HasFromString,b:FromStringMeta,c:FromStringField,d:FromStringBoth) {} });
 
 		equals('test',Dispatcher.getDecoderFor('tests.HasFromString')('test'));
 		equals(110, Dispatcher.getDecoderFor('tests.FromStringMeta')('11'));
@@ -30,7 +30,7 @@ import mweb.internal.*;
 
 	public function testClass()
 	{
-		var r = route({ any: function(a:ClsWithFromString, b:ClsWithDecoder) {} });
+		var r = anon({ any: function(a:ClsWithFromString, b:ClsWithDecoder) {} });
 		Dispatcher.addDecoder(function(str):ClsWithDecoder return new ClsWithDecoder(str+'-dec'));
 		same(new ClsWithFromString("testing-from"), Dispatcher.getDecoderFor('tests.ClsWithFromString')('testing'));
 		same(new ClsWithDecoder("testing-dec"), Dispatcher.getDecoderFor('tests.ClsWithDecoder')('testing'));
@@ -38,7 +38,7 @@ import mweb.internal.*;
 
 	public function testEnum()
 	{
-		var r = route({ any: function(a:SimpleEnum) {} });
+		var r = anon({ any: function(a:SimpleEnum) {} });
 		equals(One, Dispatcher.getDecoderFor('tests.SimpleEnum')('one'));
 		equals(One, Dispatcher.getDecoderFor('tests.SimpleEnum')('OnE'));
 		equals(null, Dispatcher.getDecoderFor('tests.SimpleEnum')('something'));

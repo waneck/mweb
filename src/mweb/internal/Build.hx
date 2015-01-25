@@ -302,8 +302,10 @@ class Build
 						typeToUnify = tuni;
 					else
 						return { data:RouteCall, routeType: tuni };
+					fields = inst.get().fields.get();
+				} else {
+					throw new Error('Invalid field of type ${atype.toString()}. Only fields of anonymous types or other Route types are supported. Use @:skip if you want to skip it.',pos);
 				}
-				fields = inst.get().fields.get();
 			case t = TFun(args,ret):
 				return { data:RouteFunc(getRoutesDef(t,metas,pos)), routeType: ret };
 			case _:
