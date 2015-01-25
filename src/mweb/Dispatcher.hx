@@ -1,6 +1,7 @@
 package mweb;
 import mweb.internal.Data;
 import mweb.internal.*;
+import mweb.tools.*;
 import mweb.Errors;
 
 /**
@@ -14,6 +15,7 @@ class Dispatcher<T>
 		The original Http Request
 	 **/
 	public var request(default,null):HttpRequest;
+
 	/**
 		The current URI, with the processesd arguments taken off
 	 **/
@@ -32,25 +34,12 @@ class Dispatcher<T>
 	public function new(request:HttpRequest)
 	{
 		this.request = request;
-		var uri = request.getURI();
+		var uri = request.getUri();
 		this.pieces = splitURI(uri);
 		this.verb = request.getMethod().toLowerCase();
 		this.routeStack = [];
 		this.metaHandlers = [];
-
-		if (request.getParamsData != null)
-		{
-			this.args = request.getParamsData();
-		} else {
-			var args = this.args = new Map();
-			switch(verb)
-			{
-				case "get":
-					splitArgs( StringTools.replace(request.getParamsString(), ';', '&'), args );
-				case _:
-					splitArgs( request.getPostData(), args );
-			}
-		}
+		this.args = request.getParamsData();
 	}
 
 	/**

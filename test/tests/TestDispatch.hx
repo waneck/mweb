@@ -16,7 +16,7 @@ class TestDispatch
 
 	inline function dispatch<T>(method,uri,map,r:Route<T>)
 	{
-		var d = new Dispatcher(HttpRequest.fromData(method,uri,map));
+		var d = new Dispatcher(mweb.tools.HttpRequest.fromData(method,uri,map));
 		return d.dispatch(r);
 	}
 

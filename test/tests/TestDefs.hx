@@ -407,6 +407,7 @@ import mweb.internal.*;
 		typeEq( anon({ any: function() return 1, anySomething: function() return "ohai" }, true), ( null : AnonRoute<Dynamic> ) );
 		typeEq( ( anon( { any: function() return 1, anySomething: function() return "ohai" } ) : Route<Dynamic> ), ( null : Route<Dynamic> ) );
 		typeEq( ( anon( { any: function() return 1, anySomething: function() return "ohai" } ) : Dynamic ), ( null : Dynamic ) );
+		typeEq( anon({ login: new StrRoute() }), ( null : AnonRoute<String> ) );
 	}
 
 	public function testDispatcherArgument()
