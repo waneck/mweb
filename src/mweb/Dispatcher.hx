@@ -452,7 +452,7 @@ class Dispatcher<T>
 			if (Std.is(route,t))
 				return cast route;
 			var data = route._getDispatchData();
-			var ret = traverseRoute(route,data,t);
+			var ret = traverseRoute(route._getSubject(),data,t);
 			if (ret != null) return ret;
 		}
 		return null;
