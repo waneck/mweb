@@ -61,6 +61,23 @@ class Main extends mweb.Route<String>
 	{
 		return '<h1>Hello, ${args.theName}</h1>';
 	}
+
+	/**
+		this function will not be route because it's a
+		private function
+	 **/
+	private function willNotBeRoute():Void
+	{
+	}
+
+	/**
+		this function will not be route because it has the
+		@:skip metadata
+	 **/
+	@:skip public function willNotBeRouteEither():Int
+	{
+		return 1;
+	}
 }
 ```
 
@@ -74,3 +91,24 @@ So by these definitions, we have two routes at Main:
 
 * `<root>`       : takes any verbs: shows a form asking the user to enter his name
 * `<root>/hello` : takes only the POST verb, and there must be on the body of the message a String parameter called `theName`
+
+### Example 2: Hello World + arguments (replce first to use address only)
+
+
+### Example 3: Anonymous types work too
+// explain about the expected type's influence
+// explain about metadata
+
+### Example 4: Type craze : map without mweb/tools
+
+
+### Example 5: Using TemplateLink
+
+
+### Example 6: Reusing our old code
+
+
+### Example 7: Accessing other routes
+
+
+### Example 8: Creating a REST Api
