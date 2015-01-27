@@ -73,4 +73,4 @@ If you want that the function take any verb, you can use `any`
 So by these definitions, we have two routes at Main:
 
 * `<root>`       : takes any verbs: shows a form asking the user to enter his name
-* `<root>`/hello : takes on POST verb, and the POST verb must include a String parameter called `theName`
+* `<root>/hello` : takes only the POST verb, and there must be on the body of the message a String parameter called `theName`
