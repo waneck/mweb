@@ -21,7 +21,7 @@ package mweb.tools;
 		}
 		for (cookie in resp.cookies)
 		{
-			this.setHeader(cookie.key, cookie.value + (cookie.options == null || cookie.options.length == 0 ? '' : ';' + cookie.options.join(';')));
+			this.setHeader("Set-Cookie", cookie.key + "=" + cookie.value + (cookie.options == null || cookie.options.length == 0 ? '' : ';' + cookie.options.join(';')));
 		}
 
 		switch(resp.response)
