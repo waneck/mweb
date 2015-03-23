@@ -68,6 +68,7 @@ class Build
 				switch( t )
 				{
 				case TInst(c, _) if (unify(t, route) && c.toString() != 'mweb.Route'):
+					// trace(c);
 					var c = c.get();
 					if (!c.meta.has(':skip') && !c.meta.has('routeRtti'))
 					{
@@ -339,6 +340,25 @@ class Build
 		return { data:RouteObj({ routes: ArrayMap.fromArray(routes) }), routeType: t };
 	}
 
+	private static function takeOffMonos(t:Type):Type
+	{
+		return switch(follow(t))
+		{
+			case t = TInst(_,[]) | TEnum(_,[]) | TAbstract(_,[]):
+				t;
+			case TMono(_):
+				TDynamic(null);
+			case TInst(cl,tl):
+				TInst(cl,[ for (t in tl) takeOffMonos(t) ]);
+			case TAbstract(a,tl):
+				TAbstract(a,[ for (t in tl) takeOffMonos(t) ]);
+			case TEnum(e,tl):
+				TEnum(e,[ for (t in tl) takeOffMonos(t) ]);
+			case t:
+				t;
+		}
+	}
+
 	private static function unifyTypes(types:Array<Type>, mainType:Null<Type>, pos:Position, warnings:Void->Array<Error>)
 	{
 		if (types.length == 0)
@@ -352,7 +372,7 @@ class Build
 				case TDynamic(null) | TMono(_):
 					macro null;
 				case _:
-					var complex = t.toComplexType();
+					var complex = takeOffMonos(t).toComplexType();
 					macro ( cast null : $complex );
 			} ];
 			var i = 0;

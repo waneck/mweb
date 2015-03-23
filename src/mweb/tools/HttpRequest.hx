@@ -1,6 +1,6 @@
 package mweb.tools;
 
-@:forward abstract HttpRequest(HttpRequestData) from HttpRequestData
+@:forward abstract HttpRequest(IHttpRequestData) from IHttpRequestData
 {
 	@:extern inline public function new(data)
 	{
@@ -43,27 +43,27 @@ package mweb.tools;
 	}
 }
 
-class HttpRequestData
+interface IHttpRequestData
 {
 	/**
 		Should return the method (verb) used by the request - values like GET/POST
 	 **/
-	public function getMethod():String { throw "Not Implemented"; }
+	public function getMethod():String;
 
 	/**
 		Should return the URI queried by the HTTP request
 	 **/
-	public function getUri():String { throw "Not Implemented"; }
+	public function getUri():String;
 
 	/**
 		Should return a String containing the parameters.
 		It is advised that as a security measure on a non-GET request, only the parameters passed
 		through the body of the message are sent here.
 	 **/
-	public function getParamsData():Map<String,Array<String>> { throw "Not Implemented"; }
+	public function getParamsData():Map<String,Array<String>>;
 }
 
-class HttpRequestStatic extends HttpRequestData
+class HttpRequestStatic implements IHttpRequestData
 {
 	var method:String;
 	var uri:String;
@@ -79,7 +79,7 @@ class HttpRequestStatic extends HttpRequestData
 	/**
 		Should return the method (verb) used by the request - values like GET/POST
 	 **/
-	override public function getMethod():String
+	public function getMethod():String
 	{
 		return method;
 	}
@@ -87,7 +87,7 @@ class HttpRequestStatic extends HttpRequestData
 	/**
 		Should return the URI queried by the HTTP request
 	 **/
-	override public function getUri():String
+	public function getUri():String
 	{
 		return uri;
 	}
@@ -97,20 +97,20 @@ class HttpRequestStatic extends HttpRequestData
 		It is advised that as a security measure on a non-GET request, only the parameters passed
 		through the body of the message are sent here.
 	 **/
-	override public function getParamsData():Map<String,Array<String>>
+	public function getParamsData():Map<String,Array<String>>
 	{
 		return params;
 	}
 }
 
-typedef LikeWeb = {
+private typedef LikeWeb = {
 	function getMethod():String;
 	function getURI():String;
 	function getParamsString():String;
 	function getPostData():String;
 }
 
-private class WebRequest extends HttpRequestData
+private class WebRequest implements IHttpRequestData
 {
 	var web:LikeWeb;
 	public function new(web)
@@ -118,17 +118,17 @@ private class WebRequest extends HttpRequestData
 		this.web = web;
 	}
 
-	override public function getMethod():String
+	public function getMethod():String
 	{
 		return web.getMethod();
 	}
 
-	override public function getUri():String
+	public function getUri():String
 	{
 		return web.getURI();
 	}
 
-	override public function getParamsData():Map<String,Array<String>>
+	public function getParamsData():Map<String,Array<String>>
 	{
 		var verb = web.getMethod();
 		var args = new Map();

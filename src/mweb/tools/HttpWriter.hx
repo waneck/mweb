@@ -7,6 +7,11 @@ package mweb.tools;
 		this = arg;
 	}
 
+	@:from @:extern inline public static function fromWeb(web:LikeWeb):HttpWriter
+	{
+		return new WebWriter(web);
+	}
+
 	public function writeResponse(resp:HttpResponse<Dynamic>)
 	{
 		var status = resp.status;
@@ -58,3 +63,44 @@ interface IHttpWriter
 	 **/
 	function redirect(to:String):Void;
 }
+
+private typedef LikeWeb = {
+	function setHeader(key:String, value:String):Void;
+	function setReturnCode(v:Int):Void;
+	function redirect(url:String):Void;
+}
+
+#if sys
+class WebWriter implements IHttpWriter
+{
+	private var web:LikeWeb;
+	public function new(web)
+	{
+		this.web = web;
+	}
+
+	public function setHeader(key:String, value:String):Void
+	{
+		web.setHeader(key,value);
+	}
+
+	public function setStatus(status:HttpStatus):Void
+	{
+		web.setReturnCode(cast status);
+	}
+
+	public function write(str:String):Void
+	{
+#if croxit_1
+		croxit.Output.print(str);
+#else
+		Sys.print(str);
+#end
+	}
+
+	public function redirect(to:String):Void
+	{
+		web.redirect(to);
+	}
+}
+#end
