@@ -245,9 +245,52 @@ Also note that `args` can also have its type inferred from usage:
 	}
 ```
 
-### Example 3: Anonymous and array types on `args` arguments
-// explain about the expected type's influence
-// explain about metadata
+### Example 3: Special types
+Apart from the basic types such as `String`, `Int`, `Float`, `Bool`, one can use more complex types.
+
+#### Decoder functions
+Any non-basic type can be used provided that a decoder function is registered. A decoder function should have the following signature:
+
+```haxe
+	typedef Decoder<T> = String->Null<T>;
+```
+
+It may throw errors, and if invalid, it should return `null`. If either `null` or an error is thrown, the decoding will be considered invalid,
+and an error of type `mweb.Errors.DecoderError` will be thrown.
+
+#### Registering decoder functions
+Any class or abstract type which has a `fromString` static function that takes a String and returns the type itself can be used directly;
+So for example `Date` from the standard library - which has a [fromString](http://api.haxe.org/Date.html#fromString) function which is compatible -
+can be used directly without registering decoder. Abstract `@:from` functions are also analyzed - if there is any `@:from` which takes a `String` as an argument
+
+Otherwise, you can register a decoder function by calling `mweb.Dispatcher.addDecoder`. The type which it is decoding to is inferred from the function's signature:
+
+```haxe
+	mweb.Dispatcher.addDecoder(function(string:String):Null<SomeType> return decodeSomeType(string)); //This will add a decoder for `SomeType`
+```
+
+Please note that `mweb.Dispatcher.addDecoder` must be called *before* any dispatch is called.
+
+
+#### Anonymous and Array types
+Both Anonymous and Array types have special handling. 
+
+##### On address arguments
+On address arguments, Anonymous types are not allowed since they make little sense in this context.
+`Array` types are allowed provided that they are the last address argument. In this cases, they function like `Rest` methods -
+in which all extra address parts are added to it:
+
+```haxe
+	// the following route:
+	function anyTest(i:Int,rest:Array<String>) {}
+	// can respond to an address part like /test/1/a/b/c/d/e
+
+	// but the following route will error:
+	function anyTest(i:Int,rest:Array<String>,shouldntExist:Int) {}
+```
+
+##### On `args` arguments
+The `args` arguments can accept both `Array` and 
 
 ### Example 4: Type craze : map without mweb/tools
 
