@@ -32,7 +32,8 @@ package mweb.tools;
 		switch(resp.response)
 		{
 			case None:
-				throw "No content was set";
+				if (res.status == 0 || res.status == 200)
+					throw "No content was set";
 			case Redirect(to):
 				this.redirect(to);
 			case Content(data):
