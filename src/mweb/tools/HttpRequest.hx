@@ -108,6 +108,7 @@ private typedef LikeWeb = {
 	function getURI():String;
 	function getParamsString():String;
 	function getPostData():String;
+	function getClientHeader(k:String):Null<String>;
 }
 
 private class WebRequest implements IHttpRequestData
@@ -120,7 +121,18 @@ private class WebRequest implements IHttpRequestData
 
 	public function getMethod():String
 	{
-		return web.getMethod();
+		var method = web.getMethod();
+
+		if (method.toLowerCase() != "get")
+		{
+			var h = web.getClientHeader('X-Http-Method-Override');
+			if (h != null) switch (h.toLowerCase()) {
+				case 'delete' | 'patch' | 'put':
+					return h.toUpperCase();
+				case _:
+			}
+		}
+		return method;
 	}
 
 	public function getUri():String
