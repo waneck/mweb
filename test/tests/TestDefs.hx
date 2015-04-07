@@ -31,6 +31,14 @@ import mweb.internal.*;
 			data: RouteFunc({ metas:[], addrArgs:[], args: null })
 		}] }), r._getDispatchData() );
 
+		var r = anon({ "any": function() {} });
+		Assert.same( RouteObj({ routes: [{
+			key: '',
+			verb: 'any',
+			name: 'any',
+			data: RouteFunc({ metas:[], addrArgs:[], args: null })
+		}] }), r._getDispatchData() );
+
 		var r = anon({ any: @someMeta function() {} });
 		Assert.same( RouteObj({ routes: [{
 			key: '',
