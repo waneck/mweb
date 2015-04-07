@@ -440,11 +440,12 @@ class Build
 					if (metas.exists(function(m) return m.name == ':skip'))
 						continue;
 					var type = dispatchData(field.expr, mainType);
-					var nameverb = splitVerb(field.field,metas,type.data,field.expr.pos);
+					var name = StringTools.replace(field.field, "@$__hx__", "");
+					var nameverb = splitVerb(name,metas,type.data,field.expr.pos);
 					routeTypes.push(type.routeType);
 					apos.push(field.expr.pos);
 
-					routes.push({ key:nameverb.name, verb:nameverb.verb, data:type.data, name:field.field });
+					routes.push({ key:nameverb.name, verb:nameverb.verb, data:type.data, name:name });
 				}
 				var t = unifyTypes(routeTypes, mainType, anon.pos, function()
 					return [ for (i in 0...routes.length) new Error('Field ${routes[i].name}: type ${routeTypes[i]}', apos[i]) ]);
