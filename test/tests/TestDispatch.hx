@@ -50,6 +50,12 @@ class TestDispatch
 
 		var val = dispatch('GET','/test/',new Map(),r2);
 		equals('end-3-2-1-getTest',val);
+
+		var r3 = anon({
+			any: function(a:Int) return 'found-$a'
+		});
+		var val = dispatch('GET', '/1/', new Map(), r3);
+		equals('found-1', val);
 	}
 
 	public function testAddrArgs()

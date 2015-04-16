@@ -188,7 +188,15 @@ class Dispatcher<T>
 					});
 					if (best == null)
 					{
-						objData.routes.forEachKey('default', function(route) {
+						objData.routes.forEachKey('', function(route) {
+							if (route.verb == 'any' || route.verb == verb)
+							{
+								if (best == null || route.verb == verb)
+									best = route;
+							}
+						});
+
+						if (best == null) objData.routes.forEachKey('default', function(route) {
 							if (route.verb == 'any' || route.verb == verb)
 							{
 								if (best == null || route.verb == verb)
