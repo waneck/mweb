@@ -145,7 +145,7 @@ private class WebRequest implements IHttpRequestData
 		var verb = web.getMethod();
 		var args = new Map();
 
-		switch(verb)
+		switch(verb.toLowerCase())
 		{
 			case "get":
 				HttpRequest.splitArgs( StringTools.replace(web.getParamsString(), ';', '&'), args );
