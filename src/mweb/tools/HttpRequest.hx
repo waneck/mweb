@@ -1,5 +1,8 @@
 package mweb.tools;
 
+/**
+	An `HttpRequest` represents a
+ **/
 @:forward abstract HttpRequest(IHttpRequestData) from IHttpRequestData
 {
 	@:extern inline public function new(data)
@@ -17,30 +20,13 @@ package mweb.tools;
 		return new HttpRequestStatic(method,uri,params == null ? new Map() : params);
 	}
 
-	public function withURI(uri:String)
+	public function withURI(uri:String):HttpRequest
 	{
-		return new HttpRequestStatic(this.getMethod(),uri,this.getParamsData());
+		var ret = new ProxyOverride(this);
+		ret.uri = uri;
+		return ret;
 	}
 
-	@:allow(mweb.tools) static function splitArgs(data:String, into:Map<String,Array<String>>)
-	{
-		if (data == null || data.length == 0)
-			return;
-		for ( part in data.split("&") )
-		{
-			var i = part.indexOf("=");
-			var k = part.substr(0, i);
-			var v = part.substr(i + 1);
-			if ( v != "" )
-				v = StringTools.urlDecode(v);
-			var data = into[k];
-			if (data == null)
-			{
-				into[k] = data = [];
-			}
-			data.push(v);
-		}
-	}
 }
 
 interface IHttpRequestData
@@ -56,11 +42,72 @@ interface IHttpRequestData
 	public function getUri():String;
 
 	/**
-		Should return a String containing the parameters.
-		It is advised that as a security measure on a non-GET request, only the parameters passed
-		through the body of the message are sent here.
+		Returns the GET parameter string
 	 **/
-	public function getParamsData():Map<String,Array<String>>;
+	public function getParams():String;
+
+	/**
+		Returns the body of the request
+	 **/
+	public function getBody():haxe.io.Bytes;
+
+	/**
+		Returns the client header that corresponds to `name` (case insensitive).
+		If no client header with this name was found, `null` is returned
+	 **/
+	public function getHeader(name:String):Null<String>;
+
+	/**
+		Returns the client IP address, as a String
+	 **/
+	public function getIp():String;
+}
+
+class ProxyOverride implements IHttpRequestData
+{
+	public var proxy(default,null):IHttpRequestData;
+
+	public var method:String;
+	public var uri:String;
+	public var params:String;
+	public var body:haxe.io.Bytes;
+	public var headers:Map<String,String>;
+	public var ip:String;
+
+	public function new(proxy)
+	{
+		this.proxy = proxy;
+	}
+
+	public function getMethod():String
+	{
+		return if (method != null) method else proxy.getMethod();
+	}
+
+	public function getUri():String
+	{
+		return if (uri != null) uri else proxy.getUri();
+	}
+
+	public function getParams():String
+	{
+		return if (params != null) params else proxy.getParams();
+	}
+
+	public function getBody():haxe.io.Bytes
+	{
+		return if (body != null) body else proxy.getBody();
+	}
+
+	public function getHeader(name:String):Null<String>
+	{
+		return if (headers != null && headers.exists(name)) headers[name] else proxy.getHeader(name);
+	}
+
+	public function getIp():String
+	{
+		return if (ip != null) ip else proxy.getIp();
+	}
 }
 
 class HttpRequestStatic implements IHttpRequestData
