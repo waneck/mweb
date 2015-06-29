@@ -1,5 +1,8 @@
 package mweb;
 
+/**
+	Thrown while dispatching to a route
+ **/
 enum DispatcherErrorType
 {
 	/**
@@ -39,6 +42,11 @@ enum DispatcherErrorType
 	Internal(err:InternalError);
 }
 
+/**
+	Internal mweb errors that really shouldn't happen. If any of these are seen,
+	either there was some tinkering with the `Route`'s internal structure, or they
+	should be reported as a bug
+ **/
 enum InternalError
 {
 	/**
@@ -52,6 +60,10 @@ enum InternalError
 	InvalidFunction(value:Dynamic);
 }
 
+/**
+	Errors thrown by the dispather will always be of this type. They include extra information
+	about where exactly the error happened
+ **/
 class DispatcherError
 {
 	public var uriPart(default,null):String;
@@ -86,4 +98,18 @@ enum RequestError
 {
 	InvalidRequest(message:String);
 	InvalidUri(uri:String,message:String);
+	PostSizeTooBig(maxSize:Int);
+}
+
+/**
+	Errors thrown by the body parser
+ **/
+enum ParseError
+{
+	/**
+		Thrown by FormEncoded when
+	 **/
+	ObjectArrayMismatch(key1:String, key2:String);
+
+	CustomParseError(msg:String);
 }

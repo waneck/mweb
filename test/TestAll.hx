@@ -11,6 +11,7 @@ class TestAll
 		runner.addCase(new TestDefs());
 		runner.addCase(new TestDecoder());
 		runner.addCase(new TestDispatch());
+		runner.addCase(new TestFormParse());
 		Report.create(runner);
 
 		var r:TestResult = null;

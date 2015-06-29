@@ -95,9 +95,15 @@ class Build
 		var defs = [];
 		for (t in types)
 		{
-			switch(follow(t))
+			var t = follow(t);
+			switch(t)
 			{
 				case TInst(_,_) | TEnum(_,_) | TAbstract(_,_):
+					switch(t)
+					{
+						case TAbstract(a, _) if (a.get().isPrivate): continue;
+						case _:
+					}
 					var tn = typeName(t,null,false);
 					var t1 = typesToCheck[tn];
 					if (t1 != null)
@@ -134,7 +140,7 @@ class Build
 				case TEnum(e,_):
 					var tn = typeName(t,null,false);
 					warnDecoder(tn,e.get().pos);
-				case TAbstract(a,_):
+				case TAbstract(a,_) if(!a.get().isPrivate):
 					var tn = typeName(t,null,false);
 					warnDecoder(tn,a.get().pos);
 				case _: continue;
