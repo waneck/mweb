@@ -25,7 +25,7 @@ using StringTools;
 			if (moverride == null) moverride = header('X-HTTP-Method-Override');
 			if (moverride == null) moverride = header('X-Method-Override');
 			if (moverride != null)
-				method = moverride.toUpperCase();
+				return moverride.toUpperCase();
 		}
 
 		return method;
