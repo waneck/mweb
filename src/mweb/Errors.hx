@@ -99,7 +99,7 @@ enum RequestError
 {
 	InvalidRequest(message:String);
 	InvalidUri(uri:String,message:String);
-	PostSizeTooBig(maxSize:Int);
+	PostSizeTooBig(maxSize:Int, ?curSize:Int);
 }
 
 /**

@@ -77,7 +77,7 @@ using StringTools;
 		Returns all client headers as a Map, where the keys are the
 		lowercase headers
 	 **/
-	@:abstract public function headers():Map<String,String>
+	@:abstract public function headers():Map<String,Array<String>>
 	{
 		throw 'Not implemented';
 	}
