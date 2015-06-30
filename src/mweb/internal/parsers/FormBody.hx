@@ -53,6 +53,7 @@ class FormBody extends BodyParser
 		if (data == null || data.length == 0)
 			return {};
 
+		var numbers = ~/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/;
 		var prop = this.allowDots ? ~/\[([^\[\]]*)\]|\.([^\.\[]*)/ : ~/\[([^\[\]]*)\]|(\B\b)/,
 		    tmpSort:Array<SortObject> = []; // the object used to sort the output
 
@@ -122,14 +123,14 @@ class FormBody extends BodyParser
 						true;
 					case 'false':
 						false;
-					case _:
+					case _ if (numbers.match(v)):
 						var f = Std.parseFloat(v);
-						if (Math.isNaN(f))
-							value;
-						else if (Std.is(f, Int))
+						if (Std.is(f, Int))
 							Std.int(f);
 						else
 							f;
+					case _:
+						v;
 				};
 			}
 

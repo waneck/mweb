@@ -41,6 +41,13 @@ class TestFormParse
 		same( parser.parseForm('a[b][][b]=v2&a[b][][a][x]=v1'), untyped { a: { b: [{ a: { x: "v1" } }, { b: "v2" }] } });
 	}
 
+	public function testCastTypes()
+	{
+		var parser = new FormBody();
+		parser.depth = null;
+		same( parser.parseForm('a=1&b=1.2&c=1.2a&d=1.2e&f=1.2e-10'), { a: 1, b: 1.2, c: '1.2a', d: '1.2e', f: 1.2e-10 } );
+	}
+
 	public function testSimpleString()
 	{
 		var parser = new FormBody();

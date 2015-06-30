@@ -5,7 +5,7 @@ import haxe.io.*;
 import neko.Web;
 #elseif php
 import php.Web;
-#elseif croxit
+#elseif (croxit || croxit_1)
 import croxit.Web;
 #end
 
