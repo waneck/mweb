@@ -7,7 +7,7 @@ using StringTools;
 	Even though this was implemented from scratch, it loosely follows the node.js module `qs` in features and API.
 	See more at https://github.com/hapijs/qs
  **/
-class FormEncoded extends BodyParser
+class FormBody extends BodyParser
 {
 	private static inline var MAGIC_EMPTY_INDEX = 0x7FFFFFFF;
 

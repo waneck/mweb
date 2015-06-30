@@ -1,7 +1,36 @@
 package mweb;
 
 /**
+	Errors thrown by the dispather will always be of this type. They include extra information
+	about where exactly the error happened
+ **/
+class DispatcherError
+{
+	public var uriPart(default,null):String;
+	public var fields(default,null):Array<String>;
+	public var error(default,null):DispatcherErrorType;
+
+	public function new(uriPart,fields,error)
+	{
+		this.uriPart = uriPart;
+		this.fields = fields;
+		this.error = error;
+	}
+
+	public function withError(e:DispatcherErrorType)
+	{
+		return new DispatcherError(uriPart,fields,e);
+	}
+
+	public function toString()
+	{
+		return 'Dispatcher error $error while processing $uriPart (${fields.join('->')})';
+	}
+}
+
+/**
 	Thrown while dispatching to a route
+	@see `DispatcherError`
  **/
 enum DispatcherErrorType
 {
@@ -58,34 +87,6 @@ enum InternalError
 		Thrown when a function object was expected, and either null or not a real function type was sent
 	 **/
 	InvalidFunction(value:Dynamic);
-}
-
-/**
-	Errors thrown by the dispather will always be of this type. They include extra information
-	about where exactly the error happened
- **/
-class DispatcherError
-{
-	public var uriPart(default,null):String;
-	public var fields(default,null):Array<String>;
-	public var error(default,null):DispatcherErrorType;
-
-	public function new(uriPart,fields,error)
-	{
-		this.uriPart = uriPart;
-		this.fields = fields;
-		this.error = error;
-	}
-
-	public function withError(e:DispatcherErrorType)
-	{
-		return new DispatcherError(uriPart,fields,e);
-	}
-
-	public function toString()
-	{
-		return 'Dispatcher error $error while processing $uriPart (${fields.join('->')})';
-	}
 }
 
 enum DecoderError

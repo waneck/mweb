@@ -1,7 +1,7 @@
 package tests;
 import utest.Assert;
 import utest.Assert.*;
-import mweb.internal.parsers.FormEncoded;
+import mweb.internal.parsers.FormBody;
 
 // some tests were adapted from https://github.com/hapijs/qs/blob/master/test/parse.js
 class TestFormParse
@@ -12,14 +12,14 @@ class TestFormParse
 
 	public function testOrder()
 	{
-		var parser = new FormEncoded();
+		var parser = new FormBody();
 
 		same( parser.parseForm('a[]=1&a[0]=2&a[100]=3&a[2]=4'),{ a: [2,4,3,1] } );
 	}
 
 	public function testBasic()
 	{
-		var parser = new FormEncoded();
+		var parser = new FormBody();
 		parser.depth = null;
 
 		same( parser.parseForm('a=1'), { a: 1 } );
@@ -43,7 +43,7 @@ class TestFormParse
 
 	public function testSimpleString()
 	{
-		var parser = new FormEncoded();
+		var parser = new FormBody();
 		parser.castTypes = false;
 
 		parser.strictNullHandling = false;
@@ -70,7 +70,7 @@ class TestFormParse
 
 	public function testQsTests()
 	{
-		var parser = new FormEncoded();
+		var parser = new FormBody();
 		parser.castTypes = false;
 		// it('allows disabling dot notation', function (done) {
 			same( parser.parseForm('a.b=c'), { a: { b: 'c' } } );
@@ -254,7 +254,7 @@ class TestFormParse
 			same( parser.parseForm('a=b&c=d'), { a: 'b', c: 'd' } );
 		// });
 		// it('allows overriding array limit', function (done) {
-			// no reason why mimick that behaviour
+			// no reason to mimick that behaviour
 			// expect(Qs.parse('a[0]=b', { arrayLimit: -1 })).to.deep.equal({ a: { '0': 'b' } }, { prototype: false });
 			// expect(Qs.parse('a[-1]=b', { arrayLimit: -1 })).to.deep.equal({ a: { '-1': 'b' } }, { prototype: false });
 			// expect(Qs.parse('a[0]=b&a[1]=c', { arrayLimit: 0 })).to.deep.equal({ a: { '0': 'b', '1': 'c' } }, { prototype: false });

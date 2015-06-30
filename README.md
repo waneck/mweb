@@ -19,7 +19,7 @@ using an anonymous object.
 * Easily create REST APIs
 * Adaptable to your workflow
 * Share route definitions between many projects
-* Easily work 
+* Type-safe and composable
 
 ## Learn by Example
 
