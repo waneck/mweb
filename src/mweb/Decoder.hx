@@ -160,7 +160,7 @@ class Decoder
 		This function is type-checked and calling it will avoid the 'no Decoder was declared' warnings.
 		IMPORTANT: this function must be called before the first .dispatch() that uses the custom type is called
 	 **/
-	macro public static function addDecoder(decoder:haxe.macro.Expr.ExprOf<Dynamic->Dynamic>)
+	macro public static function add(decoder:haxe.macro.Expr.ExprOf<Dynamic->Dynamic>)
 	{
 		var t = haxe.macro.Context.typeof(decoder);
 		var field = null;

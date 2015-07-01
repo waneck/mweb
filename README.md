@@ -26,12 +26,6 @@ using an anonymous object.
 ### Example 1: Hello, World!
 
 ```haxe
-#if neko
-import neko.Web;
-#else
-import php.Web;
-#end
-
 /**
 	This is an example route
 	It has only one route location:
@@ -42,7 +36,8 @@ class HelloRoute extends mweb.Route<String>
 {
 	public static function main()
 	{
-		var d = new mweb.Dispatcher(Web);
+		var request = new mweb.http.webstd.Request(); // works for neko.Web and php.Web
+		var d = mweb.Dispatcher.createWithRequest(request);
 		var ret = d.dispatch(new HelloRoute());
 		Sys.print(ret);
 	}
@@ -110,12 +105,6 @@ GET/POST parameters. In order to use them, a special argument named `args` can b
 The `args` argument must always be an anonymous type definition:
 
 ```haxe
-#if neko
-import neko.Web;
-#else
-import php.Web;
-#end
-
 /**
 	This is an example route
 	It has two route locations:
@@ -126,7 +115,8 @@ class HelloRoute extends mweb.Route<String>
 {
 	public static function main()
 	{
-		var d = new mweb.Dispatcher(Web);
+		var request = new mweb.http.webstd.Request(); // works for neko.Web and php.Web
+		var d = mweb.Dispatcher.createWithRequest(request);
 		var ret = d.dispatch(new HelloRoute());
 		Sys.print(ret);
 	}
@@ -156,12 +146,6 @@ So by these definitions, we have two routes at HelloRoute:
 We can further modify this example so we can have only the `<root>` route:
 
 ```haxe
-#if neko
-import neko.Web;
-#else
-import php.Web;
-#end
-
 /**
 	This is an example route
 	It has two route locations:
@@ -172,7 +156,8 @@ class HelloRoute extends mweb.Route<String>
 {
 	public static function main()
 	{
-		var d = new mweb.Dispatcher(Web);
+		var request = new mweb.http.webstd.Request(); // works for neko.Web and php.Web
+		var d = mweb.Dispatcher.createWithRequest(request);
 		var ret = d.dispatch(new HelloRoute());
 		Sys.print(ret);
 	}
@@ -200,12 +185,6 @@ Like with address arguments, `args` can be optional - so if no argument is prese
 Knowing that, we can further modify this example:
 
 ```haxe
-#if neko
-import neko.Web;
-#else
-import php.Web;
-#end
-
 /**
 	This is the 2nd sample route.
 	It has one route location:
@@ -215,7 +194,8 @@ class HelloRoute extends mweb.Route<String>
 {
 	public static function main()
 	{
-		var d = new mweb.Dispatcher(Web);
+		var request = new mweb.http.webstd.Request(); // works for neko.Web and php.Web
+		var d = mweb.Dispatcher.createWithRequest(request);
 		var ret = d.dispatch(new HelloRoute());
 		Sys.print(ret);
 	}
@@ -248,30 +228,40 @@ Also note that `args` can also have its type inferred from usage:
 ### Example 3: Special types
 Apart from the basic types such as `String`, `Int`, `Float`, `Bool`, one can use more complex types.
 
-#### Decoder functions (DISABLED)
-WARNING: the following example is disabled at the moment
-
-Any non-basic type can be used provided that a decoder function is registered. A decoder function should have the following signature:
+#### Decoder functions
+Any non-basic type can be used provided that a decoder function is registered. Since our input is a JSON-like object, a decoder
+function may have one of the following signature:
 
 ```haxe
-	typedef Decoder<T> = String->Null<T>;
+	typedef StringDecoder<T> = String->Null<T>;
+
+	typedef IntDecoder<T> = Int->Null<T>;
+
+	typedef FloatDecoder<T> = Float->Null<T>;
+
+	typedef ArrayDecoder<T> = Array<Dynamic>->Null<T>;
+
+	typedef DynamicDecoder<T> = Dynamic->Null<T>;
 ```
 
-It may throw errors, and if invalid, it should return `null`. If either `null` or an error is thrown, the decoding will be considered invalid,
+More than one decoder functions may be registered - for different input types; The decoder function itself may throw errors,
+and if the input data is invalid, it should return `null`. If either `null` is returned or an error is thrown, the decoding will be considered invalid,
 and an error of type `mweb.Errors.DecoderError` will be thrown.
 
 #### Registering decoder functions
-Any class or abstract type which has a `fromString` static function that takes a String and returns the type itself can be used directly;
+Any class or abstract type which has a `fromString`, `fromInt`, `fromFloat` or `fromDynamic` static function that takes their respective type and returns the type itself can be used directly;
 So for example `Date` from the standard library - which has a [fromString](http://api.haxe.org/Date.html#fromString) function which is compatible -
 can be used directly without registering decoder. Abstract `@:from` functions are also analyzed - if there is any `@:from` which takes a `String` as an argument
 
-Otherwise, you can register a decoder function by calling `mweb.Dispatcher.addDecoder`. The type which it is decoding to is inferred from the function's signature:
+Otherwise, you can register a decoder function by calling `mweb.Decoder.add`. The type which it is decoding to is inferred from the function's signature:
 
 ```haxe
-	mweb.Dispatcher.addDecoder(function(string:String):Null<SomeType> return decodeSomeType(string)); //This will add a decoder for `SomeType`
+	mweb.Dispatcher.addDecoder(function(string:String):Null<SomeType> return decodeSomeType(string)); //This will add a decoder from String to `SomeType`
+
+	mweb.Dispatcher.addDecoder(function(int:Int):Null<SomeType> return decodeSomeType(int)); //This will add a decoder from Int to `SomeType`
 ```
 
-Please note that `mweb.Dispatcher.addDecoder` must be called *before* any dispatch is called.
+Please note that `mweb.Decoder.add` must be called *before* any dispatch is called.
 
 
 #### Anonymous and Array types

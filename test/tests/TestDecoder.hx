@@ -31,7 +31,7 @@ class TestDecoder
 	public function testClass()
 	{
 		var r = anon({ any: function(a:ClsWithFromString, b:ClsWithDecoder) {} });
-		Decoder.addDecoder(function(str):ClsWithDecoder return new ClsWithDecoder(str+'-dec'));
+		Decoder.add(function(str):ClsWithDecoder return new ClsWithDecoder(str+'-dec'));
 		same(new ClsWithFromString("testing-from"), Decoder.current.decode('tests.ClsWithFromString', 'testing'));
 		same(new ClsWithDecoder("testing-dec"), Decoder.current.decode('tests.ClsWithDecoder','testing'));
 	}
@@ -42,7 +42,7 @@ class TestDecoder
 		equals(One, Decoder.current.decode('tests.SimpleEnum','one'));
 		equals(One, Decoder.current.decode('tests.SimpleEnum','OnE'));
 		equals(null, Decoder.current.decode('tests.SimpleEnum','something'));
-		Decoder.addDecoder(function(str) return str == null ? EOne : ETwo(str));
+		Decoder.add(function(str) return str == null ? EOne : ETwo(str));
 		equals(EOne, Decoder.current.decode('tests.ComplexEnumFromString',null));
 		same(ETwo('two'), Decoder.current.decode('tests.ComplexEnumFromString','two'));
 	}

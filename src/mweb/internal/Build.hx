@@ -87,7 +87,6 @@ class Build
 				switch( t )
 				{
 				case TInst(c, _) if (unify(t, route) && c.toString() != 'mweb.Route'):
-					// trace(c);
 					var c = c.get();
 					if (!c.meta.has(':skip') && !c.meta.has('routeRtti'))
 					{
