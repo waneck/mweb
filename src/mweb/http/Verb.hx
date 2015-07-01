@@ -5,12 +5,12 @@ package mweb.http;
  **/
 @:enum abstract Verb(String)
 {
-	var Get = "GET";
-	var Post = "POST";
-	var Put = "PUT";
-	var Delete = "DELETE";
-	var Patch = "PATCH";
-	var Head = "HEAD";
+	var Get = "get";
+	var Post = "post";
+	var Put = "put";
+	var Delete = "delete";
+	var Patch = "patch";
+	var Head = "head";
 
 	@:extern inline private function new(str)
 		this = str;
@@ -19,6 +19,6 @@ package mweb.http;
 		return this;
 
 	@:from @:extern inline public static function fromString(str:String):Verb
-		return new Verb(str.toUpperCase());
+		return new Verb(str.toLowerCase());
 }
 

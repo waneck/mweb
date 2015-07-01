@@ -1,4 +1,5 @@
 package mweb;
+import mweb.http.*;
 import mweb.internal.Data;
 import mweb.internal.*;
 import mweb.tools.*;
@@ -10,36 +11,41 @@ import mweb.Errors;
  **/
 class Dispatcher<T>
 {
-#if !macro
-	/**
-		The original Http Request
-	 **/
-	public var request(default,null):HttpRequest;
-
 	/**
 		The current URI, with the processed arguments taken off
 	 **/
 	public var uri(get,never):String;
 
 	private var pieces:Array<String>;
-	private var args:Map<String,Array<String>>;
-	private var verb:String;
+	private var verb:Verb;
 
 	private var routeStack:Array<Route<Dynamic>>;
 	private var metaHandlers:Array<Array<String>->Void>;
+	private var params:{ };
+	private var _getParams:Void->{};
 
 	/**
-		Creates a new Dispatcher class from an HTTP Request. See `mweb.HttpRequest`
+		Creates a new Dispatcher class from an `uri`, `method` and `getParameters` object.
 	 **/
-	public function new(request:HttpRequest)
+	public function new(uri:String, method:Verb, getParameters:Void->{})
 	{
-		this.request = request;
-		var uri = request.getUri();
 		this.pieces = splitUri(uri);
-		this.verb = request.getMethod().toLowerCase();
+		this.verb = method;
+		this._getParams = getParameters;
 		this.routeStack = [];
 		this.metaHandlers = [];
-		this.args = request.getParamsData();
+	}
+
+	public static function createWithRequest(req:mweb.http.Request)
+	{
+		return new Dispatcher(req.uri(), req.method(), function() return req.params());
+	}
+
+	private function getParams()
+	{
+		if (params == null)
+			params = _getParams();
+		return params;
 	}
 
 	/**
@@ -242,7 +248,7 @@ class Dispatcher<T>
 								if (!arg.many)
 									argArray.push(null);
 							} else {
-								var t = getDecoderFor(arg.type)(cur);
+								var t = Decoder.current.decode(arg.type,cur);
 								if (t == null)
 									throw new DispatcherError(lastUri, fields, InvalidArgumentType(cur,arg.type));
 								argArray.push(t);
@@ -252,9 +258,9 @@ class Dispatcher<T>
 
 					if (fn.args != null)
 					{
-						callArgs.push(buildArgs({
+						callArgs.push(buildArgs(this.getParams(), {
 							key:'', opt:fn.args.opt, type:AnonType(fn.args.data)
-						}, '', new DispatcherError(lastUri, fields, null)));
+						}, new DispatcherError(lastUri, fields, null)));
 					}
 
 					for (handler in this.metaHandlers)
@@ -295,49 +301,54 @@ class Dispatcher<T>
 		return null;
 	}
 
-	private static var decoders(get,null):Map<String,Decoder<Dynamic>>;
+	// private static var decoders(get,null):Map<String,Decoder<Dynamic>>;
 
-	private function buildArgs(arg:{ key:String, opt:Bool, type:CType }, prefix:String, err:DispatcherError):Dynamic
+	static private function buildArgs(args:Dynamic, arg:{ key:String, opt:Bool, type:CType }, err:DispatcherError):Dynamic
 	{
-		var name = prefix + arg.key;
 		switch(arg.type)
 		{
 			case TypeName(tname,many):
-				var uarg = this.args[name];
-				if (uarg == null)
+				if (args == null)
 					if (arg.opt && many)
 						return [];
 					else
 						return null;
-				if (uarg.length > 1 && !many)
-					throw err.withError(MultipleParamValues(name,uarg));
-				if (many)
+				if (Std.is(args,Array))
 				{
-					return [ for (arg in uarg) {
-						var t = getDecoderFor(tname)(arg);
-						if (t == null)
-							throw err.withError(InvalidArgumentType(arg,tname));
-						t;
-					} ];
+					var uarg:Array<Dynamic> = args;
+					if (many)
+					{
+						return [ for (arg in uarg) {
+							var t = Decoder.current.decode(tname, arg);
+							if (t == null)
+								throw err.withError(InvalidArgumentType(arg,tname));
+							t;
+						} ];
+					} else {
+						throw err.withError(MultipleParamValues(arg.key,uarg));
+					}
 				} else {
-					var t = getDecoderFor(tname)(uarg[0]);
+					var t = Decoder.current.decode(tname, args);
 					if (t == null)
-						throw err.withError(InvalidArgumentType(uarg[0],tname));
-					return t;
+						throw err.withError(InvalidArgumentType(args,tname));
+					if (many)
+						return [t];
+					else
+						return t;
 				}
 			case AnonType(fields):
 				var ret:Dynamic = {};
 				var hasValue = false;
 				var failedFields = [];
 
-				var prefix = name == '' ? name : name +'_';
 				for (field in fields)
 				{
-					var arg = buildArgs(field,prefix,err);
+					var nfield = Reflect.field(args,field.key);
+					var arg = buildArgs(nfield,field,err);
 					if (arg == null)
 					{
 						if (!field.opt)
-							failedFields.push(prefix + field.key);
+							failedFields.push(field.key);
 					} else {
 						hasValue = true;
 						Reflect.setField(ret, field.key, arg);
@@ -357,94 +368,95 @@ class Dispatcher<T>
 		}
 	}
 
-	private static function getDecoderFor<T>(typeName:String):Null<String->T>
-	{
-		var ret = decoders[typeName];
-		if (ret == null)
-		{
-			var cls:Dynamic = Type.resolveClass(typeName);
-			if (cls == null)
-				cls = Type.resolveEnum(typeName);
-			if (cls == null)
-				throw TypeNotFound(typeName);
-			ret = Reflect.field(cls,'fromString');
-			if (ret != null)
-			{
-				decoders[typeName] = ret;
-			} else {
-				try
-				{
-					var ens = Type.getEnumConstructs(cls);
-					if (ens != null)
-					{
-						var ens = [for (e in ens) e.toLowerCase() => Type.createEnum(cls,e)];
-						ret = function(s:String) return ens[s.toLowerCase()];
-						decoders[typeName] = ret;
-					}
-				}
-				catch(e:Dynamic)
-				{
-				}
-				if (ret == null)
-					throw DecoderNotFound(typeName);
-			}
-		}
-		return ret;
-	}
+	// private static function getDecoderFor<T>(typeName:String):Null<String->T>
+	// {
+	// 	var ret = decoders[typeName];
+	// 	if (ret == null)
+	// 	{
+	// 		var cls:Dynamic = Type.resolveClass(typeName);
+	// 		if (cls == null)
+	// 			cls = Type.resolveEnum(typeName);
+	// 		if (cls == null)
+	// 			throw TypeNotFound(typeName);
+	// 		ret = Reflect.field(cls,'fromString');
+	// 		if (ret != null)
+	// 		{
+	// 			decoders[typeName] = ret;
+	// 		} else {
+	// 			try
+	// 			{
+	// 				var ens = Type.getEnumConstructs(cls);
+	// 				if (ens != null)
+	// 				{
+	// 					var ens = [for (e in ens) e.toLowerCase() => Type.createEnum(cls,e)];
+	// 					ret = function(s:String) return ens[s.toLowerCase()];
+	// 					decoders[typeName] = ret;
+	// 				}
+	// 			}
+	// 			catch(e:Dynamic)
+	// 			{
+	// 			}
+	// 			if (ret == null)
+	// 				throw DecoderNotFound(typeName);
+	// 		}
+	// 	}
+	// 	return ret;
+	// }
 
-	private static function get_decoders()
-	{
-		if (decoders == null)
-		{
-			decoders = [
-				"Int" => function(v) return Std.parseInt(v),
-				"Float" => function(v):Null<Float> { var ret = Std.parseFloat(v); if (Math.isNaN(ret)) return null; return ret; },
-				"String" => function(s) return s,
-				"Bool" => function(s:String):Null<Bool> return switch(s.toLowerCase()) {
-					case "1" | "true" | "yes":
-						true;
-					case "0" | "false" | "no":
-						false;
-					case _:
-						null;
-				}
-			];
-			var meta = haxe.rtti.Meta.getType(Dispatcher);
-			if (meta != null && meta.abstractDefs != null)
-			{
-				var dec = decoders;
-				var defs = meta.abstractDefs;
-				for (def in defs)
-				{
-					var name:String = def.name;
-					if (def.fnName == null)
-					{
-						dec[name] = function(s:String) return s;
-					} else {
-						var t = Type.resolveClass(def.type);
-						if (t != null)
-						{
-							var fn = Reflect.field(t,def.fnName);
-							if (fn == null)
-								trace('WARNING: Type $name was included in build, but the field ${def.fnName} was not found. Perhaps it was eliminated by DCE?');
-							else
-								dec[name] = fn;
-						}
-					}
-				}
-			}
-		}
-		return decoders;
-	}
+	// private static function get_decoders()
+	// {
+	// 	if (decoders == null)
+	// 	{
+	// 		decoders = [
+	// 			"Int" => function(v) return Std.parseInt(v),
+	// 			"Float" => function(v):Null<Float> { var ret = Std.parseFloat(v); if (Math.isNaN(ret)) return null; return ret; },
+	// 			"String" => function(s) return s,
+	// 			"Bool" => function(s:String):Null<Bool> return switch(s.toLowerCase()) {
+	// 				case "1" | "true" | "yes":
+	// 					true;
+	// 				case "0" | "false" | "no":
+	// 					false;
+	// 				case _:
+	// 					null;
+	// 			}
+	// 		];
+	// 		var meta = haxe.rtti.Meta.getType(Dispatcher);
+	// 		if (meta != null && meta.abstractDefs != null)
+	// 		{
+	// 			var dec = decoders;
+	// 			var defs = meta.abstractDefs;
+	// 			for (def in defs)
+	// 			{
+	// 				var name:String = def.name;
+	// 				if (def.fnName == null)
+	// 				{
+	// 					dec[name] = function(s:String) return s;
+	// 				} else {
+	// 					var t = Type.resolveClass(def.type);
+	// 					if (t != null)
+	// 					{
+	// 						var fn = Reflect.field(t,def.fnName);
+	// 						if (fn == null)
+	// 							trace('WARNING: Type $name was included in build, but the field ${def.fnName} was not found. Perhaps it was eliminated by DCE?');
+	// 						else
+	// 							dec[name] = fn;
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// 	return decoders;
+	// }
 
 	/**
 		The dynamic (non-macro) version of `addDecoder`. Use of `addDecoder` is advised in order to take advatange of the
 		compile-time checking if all arguments used have their appropriate decoders associated.
 	 **/
-	public static function addDecoderRuntime<T>(name:String, d:Decoder<T>):Void
-	{
-		decoders.set(name,d);
-	}
+	// @:deprecated('This code is currently unavailable')
+	// public static function addDecoderRuntime<T>(name:String, d:Decoder<T>):Void
+	// {
+	// 	decoders.set(name,d);
+	// }
 
 	/**
 		Gets a route from the current dispatching Route.
@@ -489,26 +501,5 @@ class Dispatcher<T>
 				}
 		}
 		return null;
-	}
-#end
-
-	/**
-		Registers a custom Decoder<T> that will be used to decode 'T' types.
-		This function is type-checked and calling it will avoid the 'no Decoder was declared' warnings.
-		IMPORTANT: this function must be called before the first .dispatch() that uses the custom type is called
-	 **/
-	macro public static function addDecoder(decoder:haxe.macro.Expr.ExprOf<Decoder<Dynamic>>)
-	{
-		var t = haxe.macro.Context.typeof(decoder);
-		var field = null;
-		var type = switch(haxe.macro.Context.follow(t))
-		{
-			case TFun([str],ret) if (haxe.macro.Context.unify(str.t, haxe.macro.Context.getType("String"))):
-				ret;
-			default:
-				throw new haxe.macro.Expr.Error("Unsupported decoder type :" + haxe.macro.TypeTools.toString(t), decoder.pos);
-		}
-		var name = mweb.internal.Build.registerDecoder(type,decoder.pos);
-		return macro mweb.Dispatcher.addDecoderRuntime($v{name}, $decoder);
 	}
 }

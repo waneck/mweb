@@ -14,9 +14,9 @@ class TestDispatch
 	{
 	}
 
-	inline function dispatch<T>(method,uri,map,r:Route<T>)
+	inline function dispatch<T>(method,uri,obj,r:Route<T>)
 	{
-		var d = new Dispatcher(mweb.tools.HttpRequest.fromData(method,uri,map));
+		var d = new Dispatcher(uri,method,function() return obj);
 		return d.dispatch(r);
 	}
 
@@ -28,33 +28,33 @@ class TestDispatch
 			anyDefault: function() return 'anyDefault',
 			anyTest: function() return 'anyTest'
 		});
-		var val = dispatch('GET','/test/',new Map(),r);
+		var val = dispatch('GET','/test/',{},r);
 		equals('getTest',val);
-		var val = dispatch('POST','/test',new Map(),r);
+		var val = dispatch('POST','/test',{},r);
 		equals('anyTest',val);
-		var val = dispatch('POST','/12',new Map(),r);
+		var val = dispatch('POST','/12',{},r);
 		equals('postDefault (12)',val);
-		var val = dispatch('GET','/',new Map(),r);
+		var val = dispatch('GET','/',{},r);
 		equals('anyDefault',val);
 
-		Assert.raises(function() dispatch('GET','/12',new Map(),r), DispatcherError);
-		var val = dispatch('GET','/',new Map(),r);
+		Assert.raises(function() dispatch('GET','/12',{},r), DispatcherError);
+		var val = dispatch('GET','/',{},r);
 		equals('anyDefault',val);
 
-		Assert.raises(function() dispatch('POST','/',new Map(),r), DispatcherError);
+		Assert.raises(function() dispatch('POST','/',{},r), DispatcherError);
 
 		//map
 		var r2 = anon({
 			anyDefault: r.map(function(s) return '1-$s').map(function(s) return '2-$s').map(function(s) return '3-$s')
 		}).map(function(s) return 'end-$s');
 
-		var val = dispatch('GET','/test/',new Map(),r2);
+		var val = dispatch('GET','/test/',{},r2);
 		equals('end-3-2-1-getTest',val);
 
 		var r3 = anon({
 			any: function(a:Int) return 'found-$a'
 		});
-		var val = dispatch('GET', '/1/', new Map(), r3);
+		var val = dispatch('GET', '/1/', {}, r3);
 		equals('found-1', val);
 	}
 
@@ -74,12 +74,12 @@ class TestDispatch
 			}
 		});
 
-		equals('anySimple hello', dispatch('GET','/simple/hello/',new Map(),r));
-		raises(function() dispatch('GET','/with-many/10.1/',new Map(),r), DispatcherError);
-		equals('anyWithMany 10.1 [1]', dispatch('GET','/with-many/10.1/1',new Map(),r));
-		equals('anyWithMany 10.1 [1,30,4]', dispatch('GET','/with-many/10.1/1/30/4',new Map(),r));
-		raises(function() dispatch('GET','/with-many/10.1/hello',new Map(),r), DispatcherError);
-		equals('anyWithMany2 11.1 []', dispatch('GET','/with-many2/11.1',new Map(),r));
+		equals('anySimple hello', dispatch('GET','/simple/hello/',{},r));
+		raises(function() dispatch('GET','/with-many/10.1/',{},r), DispatcherError);
+		equals('anyWithMany 10.1 [1]', dispatch('GET','/with-many/10.1/1',{},r));
+		equals('anyWithMany 10.1 [1,30,4]', dispatch('GET','/with-many/10.1/1/30/4',{},r));
+		raises(function() dispatch('GET','/with-many/10.1/hello',{},r), DispatcherError);
+		equals('anyWithMany2 11.1 []', dispatch('GET','/with-many2/11.1',{},r));
 	}
 
 	public function testArgs()
@@ -97,22 +97,22 @@ class TestDispatch
 				return '5: $s ${args.i} ${args.o == null ? null : args.o.f} ${args.o == null ? null : args.o.s}',
 		});
 
-		equals('1: hello 3 4.4', dispatch('GET','/args1/hello',[ "i" => ["3"], "o_f" => ["4.4"] ], r));
+		equals('1: hello 3 4.4', dispatch('GET','/args1/hello',{ i:3, o: { f : 4.4 } }, r));
 		// missing non-optional o_s:
-		raises(function() dispatch('GET','/args2/hello',[ "i" => ["3"], "o_f" => ["4.4"] ], r), DispatcherError);
-		equals('2: hello 3 4.4 hi', dispatch('GET','/args2/hello',[ "i" => ["3"], "o_f" => ["4.4"], "o_s" => ["hi"] ], r));
-		equals('2: hello 3 null null', dispatch('GET','/args2/hello',[ "i" => ["3"] ], r));
-		equals('3: hello 3 4.4 null', dispatch('GET','/args3/hello',[ "i" => ["3"], "o_f" => ["4.4"] ], r));
-		equals('4: hello 3 4.4 [hi]', dispatch('GET','/args4/hello',[ "i" => ["3"], "o_f" => ["4.4"], "o_s" => ["hi"] ], r));
-		equals('5: hello 3 4.4 []', dispatch('GET','/args5/hello',[ "i" => ["3"], "o_f" => ["4.4"] ], r));
-		raises(function() dispatch('GET','/args4/hello',[ "i" => ["3"], "o_f" => ["4.4"] ], r), DispatcherError);
+		raises(function() dispatch('GET','/args2/hello',{ i: 3, o: { f: 4.4 } }, r), DispatcherError);
+		equals('2: hello 3 4.4 hi', dispatch('GET','/args2/hello',{ i: 3, o: { f: 4.4, s: "hi" } }, r));
+		equals('2: hello 3 null null', dispatch('GET','/args2/hello',{ i: 3 }, r));
+		equals('3: hello 3 4.4 null', dispatch('GET','/args3/hello',{ i: 3, o: { f: 4.4 } }, r));
+		equals('4: hello 3 4.4 [hi]', dispatch('GET','/args4/hello',{ i: 3, o: { f: 4.4, s: "hi" } }, r));
+		equals('5: hello 3 4.4 []', dispatch('GET','/args5/hello',{ i: 3, o: { f: 4.4 } }, r));
+		raises(function() dispatch('GET','/args4/hello',{ i: 3, o: { f: 4.4 } }, r), DispatcherError);
 	}
 
 	public function testDispatcherArgument()
 	{
 		typeError( anon({ any: function(d:mweb.Dispatcher<Int>) return 'hi' }) );
 		var r = anon({ any: function(d:mweb.Dispatcher<Int>) { Assert.notNull(d); if (!Std.is(d,mweb.Dispatcher)) Assert.fail(); return 10; } });
-		dispatch('GET','/',new Map(),r);
+		dispatch('GET','/',{},r);
 	}
 
 	public function testGetRoute()
@@ -120,13 +120,13 @@ class TestDispatch
 		var r = anon({
 			root: new R1()
 		});
-		dispatch('GET','/root/test',new Map(),r);
-		dispatch('GET','/root/testing/r2/test',new Map(),r);
-		dispatch('GET','/root/testing/r2/r3/test',new Map(),r);
+		dispatch('GET','/root/test',{},r);
+		dispatch('GET','/root/testing/r2/test',{},r);
+		dispatch('GET','/root/testing/r2/r3/test',{},r);
 
-		dispatch('GET','/test',new Map(),new R1());
-		dispatch('GET','/testing/r2/test',new Map(),new R1());
-		dispatch('GET','/testing/r2/r3/test',new Map(),new R1());
+		dispatch('GET','/test',{},new R1());
+		dispatch('GET','/testing/r2/test',{},new R1());
+		dispatch('GET','/testing/r2/r3/test',{},new R1());
 	}
 }
 

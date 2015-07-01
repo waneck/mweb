@@ -248,7 +248,9 @@ Also note that `args` can also have its type inferred from usage:
 ### Example 3: Special types
 Apart from the basic types such as `String`, `Int`, `Float`, `Bool`, one can use more complex types.
 
-#### Decoder functions
+#### Decoder functions (DISABLED)
+WARNING: the following example is disabled at the moment
+
 Any non-basic type can be used provided that a decoder function is registered. A decoder function should have the following signature:
 
 ```haxe

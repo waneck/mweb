@@ -185,7 +185,7 @@ import mweb.internal.*;
 			name: 'any',
 			data: RouteFunc({ metas:[], addrArgs:[
 				{ name:'i1', type:'Int', opt:false, many:false },
-				{ name:'a1', type:'tests.SomeAbstract', opt:false, many:false },
+				{ name:'a1', type:'tests.TestDefs.SomeAbstract', opt:false, many:false },
 				{ name:'z1', type:'String', opt:false, many:false }
 			], args: null })
 		}] }), r._getDispatchData() );

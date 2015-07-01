@@ -5,11 +5,11 @@ import tests.Helper.*;
 
 import mweb.Route;
 import mweb.Route.*;
-import mweb.Dispatcher;
+import mweb.Decoder;
 import mweb.internal.Data;
 import mweb.internal.*;
 
-@:access(mweb.Dispatcher) class TestDecoder
+class TestDecoder
 {
 	public function new()
 	{
@@ -20,31 +20,31 @@ import mweb.internal.*;
 		// make sure they are used
 		var r = anon({ any: function(a:HasFromString,b:FromStringMeta,c:FromStringField,d:FromStringBoth) {} });
 
-		equals('test',Dispatcher.getDecoderFor('tests.HasFromString')('test'));
-		equals(110, Dispatcher.getDecoderFor('tests.FromStringMeta')('11'));
-		equals(101, Dispatcher.getDecoderFor('tests.FromStringField')('10'));
-		equals(10.1, Dispatcher.getDecoderFor('tests.FromStringField')('1'));
-		equals(102, Dispatcher.getDecoderFor('tests.FromStringBoth')('10'));
-		equals(10.2, Dispatcher.getDecoderFor('tests.FromStringBoth')('1'));
+		equals('test',Decoder.current.decode('tests.TestDecoder.HasFromString','test'));
+		equals(110, Decoder.current.decode('tests.TestDecoder.FromStringMeta','11'));
+		equals(101, Decoder.current.decode('tests.TestDecoder.FromStringField','10'));
+		equals(10.1, Decoder.current.decode('tests.TestDecoder.FromStringField','1'));
+		equals(102, Decoder.current.decode('tests.TestDecoder.FromStringBoth','10'));
+		equals(10.2, Decoder.current.decode('tests.TestDecoder.FromStringBoth','1'));
 	}
 
 	public function testClass()
 	{
 		var r = anon({ any: function(a:ClsWithFromString, b:ClsWithDecoder) {} });
-		Dispatcher.addDecoder(function(str):ClsWithDecoder return new ClsWithDecoder(str+'-dec'));
-		same(new ClsWithFromString("testing-from"), Dispatcher.getDecoderFor('tests.ClsWithFromString')('testing'));
-		same(new ClsWithDecoder("testing-dec"), Dispatcher.getDecoderFor('tests.ClsWithDecoder')('testing'));
+		Decoder.addDecoder(function(str):ClsWithDecoder return new ClsWithDecoder(str+'-dec'));
+		same(new ClsWithFromString("testing-from"), Decoder.current.decode('tests.ClsWithFromString', 'testing'));
+		same(new ClsWithDecoder("testing-dec"), Decoder.current.decode('tests.ClsWithDecoder','testing'));
 	}
 
 	public function testEnum()
 	{
 		var r = anon({ any: function(a:SimpleEnum) {} });
-		equals(One, Dispatcher.getDecoderFor('tests.SimpleEnum')('one'));
-		equals(One, Dispatcher.getDecoderFor('tests.SimpleEnum')('OnE'));
-		equals(null, Dispatcher.getDecoderFor('tests.SimpleEnum')('something'));
-		Dispatcher.addDecoder(function(str) return str == null ? EOne : ETwo(str));
-		equals(EOne, Dispatcher.getDecoderFor('tests.ComplexEnumFromString')(null));
-		same(ETwo('two'), Dispatcher.getDecoderFor('tests.ComplexEnumFromString')('two'));
+		equals(One, Decoder.current.decode('tests.SimpleEnum','one'));
+		equals(One, Decoder.current.decode('tests.SimpleEnum','OnE'));
+		equals(null, Decoder.current.decode('tests.SimpleEnum','something'));
+		Decoder.addDecoder(function(str) return str == null ? EOne : ETwo(str));
+		equals(EOne, Decoder.current.decode('tests.ComplexEnumFromString',null));
+		same(ETwo('two'), Decoder.current.decode('tests.ComplexEnumFromString','two'));
 	}
 }
 
@@ -111,7 +111,7 @@ abstract FromStringBoth(Float)
 		return cast Std.parseFloat(s);
 	}
 
-	public static function fromString(s:String):FromStringField
+	public static function fromString(s:String):FromStringBoth
 	{
 		return cast Std.parseInt(s) * 10.2;
 	}

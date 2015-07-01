@@ -6,6 +6,7 @@ import haxe.macro.Type;
 import mweb.internal.Data;
 
 using Lambda;
+using StringTools;
 using haxe.macro.TypeTools;
 using haxe.macro.ExprTools;
 
@@ -16,7 +17,8 @@ class Build
 
 	private static var typesWithDecoders:Map<String,Bool> = new Map();
 	private static var typesToCheck:Map<String,Array<Position>> = new Map();
-	private static var usedAbstracts:Map<String,Bool> = new Map();
+
+	private static var definitions:Map<String,HelperClassDefinition> = new Map();
 
 	public static function build():Array<Field>
 	{
@@ -48,11 +50,28 @@ class Build
 			pos: pos,
 		});
 
+		// make sure this part will only be called once by compilation context
 		if( addedRtti ) return fields;
 		addedRtti = true;
 		if( firstCompilation ) {
 			firstCompilation = false;
 			Context.onMacroContextReused(function() {
+				for (k in definitions.keys())
+				{
+					var def = definitions[k];
+					if (def.mustRebuild())
+					{
+						definitions.remove(k);
+					} else {
+						try {
+							Context.getType(k); //ensure the type exists
+							Context.defineType(def.def);
+						}
+						catch(e:Dynamic) {
+							definitions.remove(k);
+						}
+					}
+				}
 				addedRtti = false;
 				typesToCheck = new Map();
 				// GLOBAL = null;
@@ -117,6 +136,95 @@ class Build
 		}
 	}
 
+	private static function isDynamic(t:Type)
+	{
+		return switch(follow(t))
+		{
+			case TDynamic(_): true;
+			case _: false;
+		}
+	}
+
+	private static function createDefFromAbstract(typeName:String, a:AbstractType, type:Type):Void
+	{
+		var fields = [
+			{ name:'String', t:getType('String'), fieldName:null, implict:false },
+			{ name:'Int', t:getType('Int'), fieldName:null, implict:false },
+			{ name:'Float', t:getType('Float'), fieldName:null, implict:false },
+			{ name:'Dynamic', t:getType('Dynamic'), fieldName:null, implict:false },
+		];
+		// look for @:from types
+		for (from in a.from)
+		{
+			for (field in fields)
+			{
+				var found = false;
+				if (field.name == 'Dynamic')
+				{
+					if (isDynamic(from.t))
+						found = true;
+				} else {
+					if (unify(from.t,field.t))
+						found = true;
+				}
+
+				if (found)
+				{
+					if (from.field == null)
+						field.implict = true;
+					else
+						field.fieldName = from.field.name;
+					break;
+				}
+			}
+		}
+
+		// look for fromXXXX types
+		var impl = a.impl.get();
+		for (field in fields)
+		{
+			var f = impl.findField('from' + field.name, true);
+			if (f != null) switch (follow(f.type)) {
+				case TFun([arg],ret) if (unify(arg.t,field.t) && unify(ret,type)):
+					field.fieldName = 'from' + field.name;
+				case _:
+			}
+		}
+
+		var objdecl = [],
+		    abstrThis = Context.parse(typeName,a.pos);
+		for (field in fields)
+		{
+			if (field.fieldName != null)
+			{
+				var fname = field.fieldName;
+				objdecl.push({ field:'from'+field.name, expr:
+					macro @:privateAccess $abstrThis.$fname.bind()
+				});
+			} else if (field.implict) {
+				var fname = field.fieldName;
+				var type = TPath({ pack:[], name: field.name });
+				objdecl.push({ field:'from'+field.name, expr:
+					macro function(obj:$type) return obj
+				});
+			}
+		}
+		if (objdecl.length > 0)
+		{
+			var objdecl = { expr: EObjectDecl(objdecl), pos: a.pos };
+			var def = macro class {
+				@:keep public static var data = $objdecl;
+			};
+			def.name = typeName.replace('.','_');
+			def.pack = ['mweb','decoders'];
+			def.meta = def.fields[0].meta;
+
+			var def = new HelperClassDefinition(typeName,def,getPosInfos(a.pos).file);
+			definitions[typeName] = def;
+			defineType(def.def);
+		}
+	}
+
 	private static function postProcessClasses(types:Array<Type>):Void
 	{
 		inline function warnDecoder(name:String, pos:Position)
@@ -164,7 +272,6 @@ class Build
 
 	private static function postProcessAbstracts(types:Array<Type>):Void
 	{
-		var defs = [];
 		var str = getType('String');
 		for (t in types)
 		{
@@ -172,76 +279,26 @@ class Build
 			{
 				case TAbstract(a,_):
 					var a2 = a.get();
-					if (usedAbstracts[a.toString()] == true && !a2.isPrivate)
-					{
-						var name = a.toString();
-						// trace(name,usedAbstracts[a.toString()]);
-						var a = a2;
-						var fnName = null,
-								found = true;
-						if (a.impl != null)
-						{
-							var impl = a.impl.get();
-							for (field in impl.statics.get())
-							{
-								if (field.name == 'fromString')
-								{
-									fnName = field.name;
-									found = true;
-									break;
-								}
-							}
-						}
-						if (fnName == null && a.from != null)
-						{
-							for (f in a.from)
-								{
-								if (unify(f.t,str))
-								{
-									if (f.field != null)
-										fnName = f.field.name;
-									found = true;
-									}
-							}
-						}
-
-						// trace('here',name,found,fnName);
-						if (found)
-						{
-							var impl = null;
-							if (a.impl != null) impl = a.impl.get();
-							var def = {
-								type: impl == null ?
-									a.pack.join('.') + (a.pack.length == 0 ? '' : '.') + a.name :
-									impl.pack.join('.') + '.' + impl.name,
-								fnName: fnName,
-								name: name
-							}
-							// expr = macro mweb.Dispatcher.addDecoderRuntime($v{name},@:privateAccess $expr);
-							// exprs.push(expr);
-							defs.push(def);
-							typesToCheck.remove(name);
-						// } else {
-							var used = typesToCheck[name];
-						// 	if (used != null)
-						// 	{
-						// 		warning('Abstract type $name needs a decoder for mweb.Dispatcher, but no decoder was found',a.pos);
-						// 		for (pos in used)
-						// 			warning('Type $name was used here',pos);
-						// 	}
-						}
-					}
+					var name = a2.module + '.' + a2.name;
+					if (typesToCheck.exists(name) && definitions.exists(name))
+						typesToCheck.remove(name);
 				case _:
 			}
 		}
 
-		switch (getType('mweb.Dispatcher'))
+		switch (getType('mweb.Decoder'))
 		{
 			case TInst(cl,_):
 				var cl = cl.get();
 				if (cl.meta.has('abstractDefs'))
 					cl.meta.remove('abstractDefs');
-				cl.meta.add('abstractDefs',[ for (d in defs) macro $v{d} ],Context.currentPos());
+				var ret = [];
+				for (t in definitions)
+				{
+					ret.push(t.typeName);
+					// ret.push(t.def.name);
+				}
+				cl.meta.add('abstractDefs',[ for (d in ret) macro $v{d} ],Context.currentPos());
 			case _:
 				throw 'assert';
 		}
@@ -252,7 +309,7 @@ class Build
 		var name = typeName(type, pos);
 		switch(name)
 		{
-			case "Int" | "String" | "Float" | "Bool" | "Single" | "mweb.Dispatcher":
+			case "Int" | "String" | "Float" | "Bool" | "mweb.Dispatcher":
 				throw new Error('Cannot register decoder for basic type $name',pos);
 			case _:
 				typesWithDecoders[name] = true;
@@ -604,13 +661,22 @@ class Build
 				var a2 = a.get();
 				if (a2.isPrivate)
 					throw new Error('Private abstract type ${t.toString()} is not supported',pos);
-				var ret = a.toString();
-				switch(ret)
+				var ret = if (a2.pack.length == 0)
+					a.toString()
+				else
+					a2.module + '.' + a2.name;
+				if (register)
 				{
-					case "Int" | "Float" | "Bool" | "Single":
-					case _:
-						if (register) usedAbstracts[ret] = true;
-						reg(ret);
+					switch(a.toString())
+					{
+						case "Int" | "Float" | "Bool" | "Single":
+						case _ if (a2.impl == null):
+							throw new Error('Core type $a is not supported as a mweb Decoder',pos);
+						case str:
+							reg(str);
+							if (!definitions.exists(ret)) //already processed
+								createDefFromAbstract(ret,a2, t);
+					}
 				}
 				ret;
 			case _:
@@ -716,6 +782,38 @@ class Build
 				true;
 			case _:
 				false;
+		}
+	}
+}
+
+class HelperClassDefinition
+{
+	public var typeName(default,null):String;
+	public var def(default,null):TypeDefinition;
+	public var modulePath(default,null):String;
+	public var lastChange(default,null):Float;
+
+	public function new(typeName,def,modulePath)
+	{
+		this.typeName = typeName;
+		this.def = def;
+		this.modulePath = modulePath;
+		this.lastChange = 0;
+		mustRebuild();
+	}
+
+	public function mustRebuild():Bool
+	{
+		try
+		{
+			var change = sys.FileSystem.stat(modulePath).mtime.getTime();
+			var last = this.lastChange;
+			this.lastChange = change;
+			return change > last;
+		}
+		catch(e:Dynamic)
+		{
+			return true;
 		}
 	}
 }

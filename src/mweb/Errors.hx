@@ -48,7 +48,7 @@ enum DispatcherErrorType
 		Thrown when there's more than one parameter with name `parameterName`,
 		and the `args` interface isn't typed as an Array
 	 **/
-	MultipleParamValues(parameterName:String,values:Array<String>);
+	MultipleParamValues(parameterName:String,values:Array<Dynamic>);
 
 	/**
 		Thrown when the parameters with names `parameterNames` is missing
