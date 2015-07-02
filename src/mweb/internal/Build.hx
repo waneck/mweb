@@ -247,9 +247,11 @@ class Build
 				case TEnum(e,_):
 					var tn = typeName(t,null,false);
 					warnDecoder(tn,e.get().pos);
+					continue;
 				case TAbstract(a,_) if(!a.get().isPrivate):
 					var tn = typeName(t,null,false);
 					warnDecoder(tn,a.get().pos);
+					continue;
 				case _: continue;
 			}
 			var tn = typeName(t,null,false);
@@ -672,9 +674,10 @@ class Build
 						case _ if (a2.impl == null):
 							throw new Error('Core type $a is not supported as a mweb Decoder',pos);
 						case str:
-							reg(str);
 							if (!definitions.exists(ret)) //already processed
 								createDefFromAbstract(ret,a2, t);
+							if (!definitions.exists(ret)) //already processed
+								reg(str);
 					}
 				}
 				ret;
