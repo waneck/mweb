@@ -1,4 +1,5 @@
 package mweb.http;
+import mweb.tools.*;
 using StringTools;
 
 /**
@@ -9,10 +10,10 @@ using StringTools;
 	@:extern inline public function new()
 		this = new HttpResponseData();
 
-	@:from public static function fromContent<T>(data:TemplateLink<T>):HttpResponse<T>
+	@:from public static function fromContent<T>(data:TemplateLink<T>):Response<T>
 		return new HttpResponseData().setContent(data);
 
-	@:from @:extern inline public static function fromStatus<T>(status:Status):HttpResponse<T>
+	@:from @:extern inline public static function fromStatus<T>(status:Status):Response<T>
 		return new HttpResponseData().setStatus(status);
 
 	@:extern inline public static function empty()
@@ -78,7 +79,7 @@ class HttpResponseData<T>
 		return this;
 	}
 
-	public function setStatus(s:HttpStatus)
+	public function setStatus(s:Status)
 	{
 		if (this.status == 0)
 			this.status = s;

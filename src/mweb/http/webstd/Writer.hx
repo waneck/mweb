@@ -18,7 +18,7 @@ class Writer extends mweb.http.Writer
 		Web.setHeader(key,value);
 	}
 
-	override public function setStatus(status:HttpStatus):Void
+	override public function setStatus(status:Status):Void
 	{
 		Web.setReturnCode(cast status);
 	}

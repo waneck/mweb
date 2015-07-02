@@ -2,7 +2,7 @@ package mweb.http;
 
 @:abstract class Writer
 {
-	public function writeResponse(resp:Response):Void
+	public function writeResponse<T>(resp:Response<T>):Void
 	{
 		var status = resp.status;
 
@@ -42,7 +42,7 @@ package mweb.http;
 	/**
 		Sets the return status
 	 **/
-	@:abstract public function setStatus(status:HttpStatus):Void
+	@:abstract public function setStatus(status:Status):Void
 	{
 		throw 'Not Implemented';
 	}
