@@ -185,8 +185,7 @@ class Decoder
 					case _:
 						return macro @:pos(decoder.pos) @:privateAccess mweb.Decoder.current.getData($v{name()}).fromDynamic = $decoder;
 				}
-
-				ret;
+				throw 'assert';
 			default:
 				throw new haxe.macro.Expr.Error("Unsupported decoder type :" + haxe.macro.TypeTools.toString(t), decoder.pos);
 		}
