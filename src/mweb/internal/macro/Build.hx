@@ -223,7 +223,6 @@ class Build
 
 		var objdecl = [],
 		    abstrThis = Context.parse(typeName,a.pos);
-		trace(abstrThis);
 		for (field in fields)
 		{
 			if (field.fieldName != null)
