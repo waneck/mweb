@@ -362,101 +362,11 @@ class Dispatcher<T>
 					if (arg.opt)
 						return null;
 					else
-						err.withError(MissingArgument([arg.key]));
+						throw err.withError(MissingArgument( arg.key == '' ? failedFields : [arg.key]));
 				}
 				return ret;
 		}
 	}
-
-	// private static function getDecoderFor<T>(typeName:String):Null<String->T>
-	// {
-	// 	var ret = decoders[typeName];
-	// 	if (ret == null)
-	// 	{
-	// 		var cls:Dynamic = Type.resolveClass(typeName);
-	// 		if (cls == null)
-	// 			cls = Type.resolveEnum(typeName);
-	// 		if (cls == null)
-	// 			throw TypeNotFound(typeName);
-	// 		ret = Reflect.field(cls,'fromString');
-	// 		if (ret != null)
-	// 		{
-	// 			decoders[typeName] = ret;
-	// 		} else {
-	// 			try
-	// 			{
-	// 				var ens = Type.getEnumConstructs(cls);
-	// 				if (ens != null)
-	// 				{
-	// 					var ens = [for (e in ens) e.toLowerCase() => Type.createEnum(cls,e)];
-	// 					ret = function(s:String) return ens[s.toLowerCase()];
-	// 					decoders[typeName] = ret;
-	// 				}
-	// 			}
-	// 			catch(e:Dynamic)
-	// 			{
-	// 			}
-	// 			if (ret == null)
-	// 				throw DecoderNotFound(typeName);
-	// 		}
-	// 	}
-	// 	return ret;
-	// }
-
-	// private static function get_decoders()
-	// {
-	// 	if (decoders == null)
-	// 	{
-	// 		decoders = [
-	// 			"Int" => function(v) return Std.parseInt(v),
-	// 			"Float" => function(v):Null<Float> { var ret = Std.parseFloat(v); if (Math.isNaN(ret)) return null; return ret; },
-	// 			"String" => function(s) return s,
-	// 			"Bool" => function(s:String):Null<Bool> return switch(s.toLowerCase()) {
-	// 				case "1" | "true" | "yes":
-	// 					true;
-	// 				case "0" | "false" | "no":
-	// 					false;
-	// 				case _:
-	// 					null;
-	// 			}
-	// 		];
-	// 		var meta = haxe.rtti.Meta.getType(Dispatcher);
-	// 		if (meta != null && meta.abstractDefs != null)
-	// 		{
-	// 			var dec = decoders;
-	// 			var defs = meta.abstractDefs;
-	// 			for (def in defs)
-	// 			{
-	// 				var name:String = def.name;
-	// 				if (def.fnName == null)
-	// 				{
-	// 					dec[name] = function(s:String) return s;
-	// 				} else {
-	// 					var t = Type.resolveClass(def.type);
-	// 					if (t != null)
-	// 					{
-	// 						var fn = Reflect.field(t,def.fnName);
-	// 						if (fn == null)
-	// 							trace('WARNING: Type $name was included in build, but the field ${def.fnName} was not found. Perhaps it was eliminated by DCE?');
-	// 						else
-	// 							dec[name] = fn;
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// 	return decoders;
-	// }
-
-	/**
-		The dynamic (non-macro) version of `addDecoder`. Use of `addDecoder` is advised in order to take advatange of the
-		compile-time checking if all arguments used have their appropriate decoders associated.
-	 **/
-	// @:deprecated('This code is currently unavailable')
-	// public static function addDecoderRuntime<T>(name:String, d:Decoder<T>):Void
-	// {
-	// 	decoders.set(name,d);
-	// }
 
 	/**
 		Gets a route from the current dispatching Route.

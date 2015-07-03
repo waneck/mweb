@@ -100,6 +100,7 @@ class TestDispatch
 		equals('1: hello 3 4.4', dispatch('GET','/args1/hello',{ i:3, o: { f : 4.4 } }, r));
 		// missing non-optional o_s:
 		raises(function() dispatch('GET','/args2/hello',{ i: 3, o: { f: 4.4 } }, r), DispatcherError);
+		raises(function() dispatch('GET','/args1/hello',{ i: 3 }, r), DispatcherError);
 		equals('2: hello 3 4.4 hi', dispatch('GET','/args2/hello',{ i: 3, o: { f: 4.4, s: "hi" } }, r));
 		equals('2: hello 3 null null', dispatch('GET','/args2/hello',{ i: 3 }, r));
 		equals('3: hello 3 4.4 null', dispatch('GET','/args3/hello',{ i: 3, o: { f: 4.4 } }, r));

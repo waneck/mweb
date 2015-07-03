@@ -192,11 +192,6 @@ class Decoder
 	}
 }
 
-/**
-	In order to support custom types, one must provide a custom Decoder implementation
-	**/
-// typedef Decoder<T> = String->T;
-
 #if !macro
 typedef DecoderData = {
 	?fromString:String->Dynamic,

@@ -25,23 +25,10 @@ class BodyParser
 
 	public function parseRequest(req:mweb.http.Request, ?maxByteSize:Int):{ }
 	{
-		return null;
-		// return switch(req.method())
-		// {
-		// 	case Get | Head:
-		// 		// always urlencoded
-		// 		// var data = req.getUriParams().replace(';','&');
-		// 		var data = req.uriParams();
-		// 		parseForm(data);
-		// 	case _:
-		// 		switch (req.contentType())
-		// 		{
-		// 			case 'application/json':
-		// 				haxe.Json.parse( req.body(maxByteSize) );
-		// 			// case 'application/x-www-form-ulrencoded':
-		// 			case _:
-		// 				parseForm( req.body(maxByteSize).toString() );
-		// 		}
-		// }
+		var ct = req.contentType();
+		if (ct == null || ct.endsWith('urlencoded'))
+			return new mweb.internal.parsers.FormBody().parseRequest(req,maxByteSize);
+		else
+			return new mweb.internal.parsers.JsonBody().parseRequest(req,maxByteSize);
 	}
 }
