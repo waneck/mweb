@@ -26,6 +26,10 @@ class TestDecoder
 		equals(10.1, Decoder.current.decode('tests.TestDecoder.FromStringField','1'));
 		equals(102, Decoder.current.decode('tests.TestDecoder.FromStringBoth','10'));
 		equals(10.2, Decoder.current.decode('tests.TestDecoder.FromStringBoth','1'));
+
+		var route = new SomeRoute();
+		var dispatch = new mweb.Dispatcher(Get, '/10');
+		equals('103', dispatch.dispatch(route));
 	}
 
 	public function testClass()
@@ -45,6 +49,14 @@ class TestDecoder
 		Decoder.add(function(str) return str == null ? EOne : ETwo(str));
 		equals(EOne, Decoder.current.decode('tests.ComplexEnumFromString',null));
 		same(ETwo('two'), Decoder.current.decode('tests.ComplexEnumFromString','two'));
+	}
+}
+
+private class SomeRoute extends mweb.Route<String>
+{
+	public function any(a:FromStringBothUsedByClass):String
+	{
+		return Std.string(a);
 	}
 }
 
@@ -117,3 +129,15 @@ abstract FromStringBoth(Float)
 	}
 }
 
+abstract FromStringBothUsedByClass(Float)
+{
+	@:from public static function fs(s:String)
+	{
+		return cast Std.parseFloat(s);
+	}
+
+	public static function fromString(s:String):FromStringBoth
+	{
+		return cast Std.parseInt(s) * 10.3;
+	}
+}

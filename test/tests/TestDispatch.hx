@@ -16,7 +16,7 @@ class TestDispatch
 
 	inline function dispatch<T>(method,uri,obj,r:Route<T>)
 	{
-		var d = new Dispatcher(uri,method,function() return obj);
+		var d = new Dispatcher(method,uri,function() return obj);
 		return d.dispatch(r);
 	}
 

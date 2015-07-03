@@ -27,7 +27,7 @@ class Dispatcher<T>
 	/**
 		Creates a new Dispatcher class from an `uri`, `method` and `getParameters` object.
 	 **/
-	public function new(uri:String, method:Verb, getParameters:Void->{})
+	public function new(method:Verb, uri:String, ?getParameters:Void->{})
 	{
 		this.pieces = splitUri(uri);
 		this.verb = method;
@@ -38,12 +38,12 @@ class Dispatcher<T>
 
 	public static function createWithRequest(req:mweb.http.Request)
 	{
-		return new Dispatcher(req.uri(), req.method(), function() return req.params());
+		return new Dispatcher(req.method(), req.uri(), function() return req.params());
 	}
 
 	private function getParams()
 	{
-		if (params == null)
+		if (params == null && _getParams != null)
 			params = _getParams();
 		return params;
 	}
