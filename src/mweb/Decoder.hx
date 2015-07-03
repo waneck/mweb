@@ -30,7 +30,7 @@ class Decoder
 			for (def in defs)
 			{
 				var name:String = def;
-				var cls = Type.resolveClass('mweb.decoders.' + name.replace('.','_'));
+				var cls = Type.resolveClass('mweb.decoders.' + name.replace('.','_') + '__');
 				if (cls != null)
 				{
 					data[name] = Reflect.field(cls, 'data');
@@ -167,7 +167,7 @@ class Decoder
 		switch(haxe.macro.Context.follow(t))
 		{
 			case TFun([str],ret):
-				var name = function() return mweb.internal.Build.registerDecoder(ret,decoder.pos);
+				var name = function() return mweb.internal.macro.Build.registerDecoder(ret,decoder.pos);
 				switch(haxe.macro.Context.follow(str.t))
 				{
 					case TAbstract(a,_):

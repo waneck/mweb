@@ -27,7 +27,7 @@ class TestDecoder
 		equals(102, Decoder.current.decode('tests.TestDecoder.FromStringBoth','10'));
 		equals(10.2, Decoder.current.decode('tests.TestDecoder.FromStringBoth','1'));
 
-		var route = new SomeRoute();
+		var route = new RouteThatUsesAbstract();
 		var dispatch = new mweb.Dispatcher(Get, '/10');
 		equals('103', dispatch.dispatch(route));
 	}
@@ -52,7 +52,7 @@ class TestDecoder
 	}
 }
 
-private class SomeRoute extends mweb.Route<String>
+private class RouteThatUsesAbstract extends mweb.Route<String>
 {
 	public function any(a:FromStringBothUsedByClass):String
 	{
@@ -136,7 +136,7 @@ abstract FromStringBothUsedByClass(Float)
 		return cast Std.parseFloat(s);
 	}
 
-	public static function fromString(s:String):FromStringBoth
+	public static function fromString(s:String):FromStringBothUsedByClass
 	{
 		return cast Std.parseInt(s) * 10.3;
 	}

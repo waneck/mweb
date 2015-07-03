@@ -1,4 +1,4 @@
-package mweb.internal;
+package mweb.internal.macro;
 import haxe.macro.Context;
 import haxe.macro.Context.*;
 import haxe.macro.Expr;
@@ -31,7 +31,8 @@ class Build
 		}
 
 		var pos = currentPos();
-		var clname = Context.getLocalClass().get().name;
+		var c = Context.getLocalClass().get();
+		var clname = c.name;
 
 		fields.push({
 			name: '_dispatchDataCache',
@@ -48,6 +49,19 @@ class Build
 				expr: macro return _dispatchDataCache
 			}),
 			pos: pos,
+		});
+
+		// this is a workaround until HaxeFoundation/haxe#4379 isn't solved
+		// see commented code at onGenerate
+		fields.push({
+			name: '__delay_macro_build',
+			access: [APrivate,AStatic],
+			kind: FFun({
+				args: [],
+				ret: null,
+				expr: macro mweb.internal.macro.Delay.delayTyping()
+			}),
+			pos: pos
 		});
 
 		// make sure this part will only be called once by compilation context
@@ -83,22 +97,22 @@ class Build
 		var route = typeof( macro (null : mweb.Route<Dynamic>) );
 
 		Context.onGenerate(function(types) {
-			for( t in types )
-				switch( t )
-				{
-				case TInst(c, _) if (unify(t, route) && c.toString() != 'mweb.Route'):
-					var c = c.get();
-					if (!c.meta.has(':skip') && !c.meta.has('routeRtti'))
-					{
-						var s = new haxe.Serializer();
-						s.useEnumIndex = true;
-						// s.useCache = true;
-						var data = dispatchDataType(t,c.meta.get(),c.pos,true).data;
-						s.serialize(data);
-						c.meta.add("routeRtti", [ { expr : EConst(CString(s.toString())), pos : c.pos } ], c.pos);
-					}
-				default:
-				}
+			// for( t in types )
+			// 	switch( t )
+			// 	{
+			// 	case TInst(c, _) if (unify(t, route) && c.toString() != 'mweb.Route'):
+			// 		var c = c.get();
+			// 		if (!c.meta.has(':skip') && !c.meta.has('routeRtti'))
+			// 		{
+			// 			var s = new haxe.Serializer();
+			// 			s.useEnumIndex = true;
+			// 			// s.useCache = true;
+			// 			var data = dispatchDataType(t,c.meta.get(),c.pos,true).data;
+			// 			s.serialize(data);
+			// 			c.meta.add("routeRtti", [ { expr : EConst(CString(s.toString())), pos : c.pos } ], c.pos);
+			// 		}
+			// 	default:
+			// 	}
 
 			postProcess1(types);
 			postProcessAbstracts(types);
@@ -106,6 +120,23 @@ class Build
 		});
 		Context.registerModuleReuseCall("mweb.Route", "mweb.internal.Build.build()");
 		return fields;
+	}
+
+	public static function delayed()
+	{
+		var c = Context.getLocalClass().get();
+		var clname = c.name;
+
+		var t = Context.getLocalType();
+		if (t != null && !c.meta.has(':skip') && !c.meta.has('routeRtti'))
+		{
+			var s = new haxe.Serializer();
+			s.useEnumIndex = true;
+			// s.useCache = true;
+			var data = dispatchDataType(t,c.meta.get(),c.pos,true).data;
+			s.serialize(data);
+			c.meta.add("routeRtti", [ { expr : EConst(CString(s.toString())), pos : c.pos } ], c.pos);
+		}
 	}
 
 	private static function postProcess1(types:Array<Type>):Void
@@ -192,6 +223,7 @@ class Build
 
 		var objdecl = [],
 		    abstrThis = Context.parse(typeName,a.pos);
+		trace(abstrThis);
 		for (field in fields)
 		{
 			if (field.fieldName != null)
@@ -214,7 +246,7 @@ class Build
 			var def = macro class {
 				@:keep public static var data = $objdecl;
 			};
-			def.name = typeName.replace('.','_');
+			def.name = typeName.replace('.','_') + '__';
 			def.pack = ['mweb','decoders'];
 			def.meta = def.fields[0].meta;
 

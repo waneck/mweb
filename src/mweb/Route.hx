@@ -36,7 +36,7 @@ import mweb.internal.Data;
 	on the route contruction.
 	Any other metadata applied to a method will
  **/
-@:autoBuild(mweb.internal.Build.build())
+@:autoBuild(mweb.internal.macro.Build.build())
 @:allow(mweb.Dispatcher)
 class Route<T>
 {
@@ -107,10 +107,10 @@ class Route<T>
 				case t = TDynamic(_):
 					t;
 				case _:
-					mweb.internal.Build.routeTypeFromType(exp);
+					mweb.internal.macro.Build.routeTypeFromType(exp);
 			}
 		};
-		var t = mweb.internal.Build.dispatchData(anon, mainType);
+		var t = mweb.internal.macro.Build.dispatchData(anon, mainType);
 		var expr = haxe.macro.Context.makeExpr( t.data, pos );
 		switch( haxe.macro.Context.follow(t.routeType) )
 		{
