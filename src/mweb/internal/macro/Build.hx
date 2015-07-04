@@ -37,7 +37,7 @@ class Build
 		fields.push({
 			name: '_dispatchDataCache',
 			access: [AStatic],
-			kind: FProp('default','null', macro : mweb.internal.Data.DispatchData, macro mweb.Route._dispatchDataFromMeta($i{clname})),
+			kind: FProp('default','null', macro : mweb.internal.Data.DispatchData, macro mweb.internal.macro.GetRouteData.getRouteData()),
 			pos: pos
 		});
 		fields.push({
@@ -49,19 +49,6 @@ class Build
 				expr: macro return _dispatchDataCache
 			}),
 			pos: pos,
-		});
-
-		// this is a workaround until HaxeFoundation/haxe#4379 isn't solved
-		// see commented code at onGenerate
-		fields.push({
-			name: '__delay_macro_build',
-			access: [APrivate,AStatic],
-			kind: FFun({
-				args: [],
-				ret: null,
-				expr: macro mweb.internal.macro.Delay.delayTyping()
-			}),
-			pos: pos
 		});
 
 		// make sure this part will only be called once by compilation context
@@ -122,21 +109,18 @@ class Build
 		return fields;
 	}
 
-	public static function delayed()
+	public static function getRouteData()
 	{
 		var c = Context.getLocalClass().get();
 		var clname = c.name;
 
 		var t = Context.getLocalType();
-		if (t != null && !c.meta.has(':skip') && !c.meta.has('routeRtti'))
+		if (t != null && !c.meta.has(':skip'))
 		{
-			var s = new haxe.Serializer();
-			s.useEnumIndex = true;
-			// s.useCache = true;
 			var data = dispatchDataType(t,c.meta.get(),c.pos,true).data;
-			s.serialize(data);
-			c.meta.add("routeRtti", [ { expr : EConst(CString(s.toString())), pos : c.pos } ], c.pos);
+			return Context.makeExpr(data, c.pos);
 		}
+		return macro null;
 	}
 
 	private static function postProcess1(types:Array<Type>):Void
