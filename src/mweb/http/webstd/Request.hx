@@ -11,8 +11,9 @@ import croxit.Web;
 
 class Request extends mweb.http.Request
 {
-	public function new()
+	public function new(?config:mweb.Config)
 	{
+		super(config);
 	}
 
 	override private function methodImpl():String
@@ -30,7 +31,7 @@ class Request extends mweb.http.Request
 		return Web.getParamsString();
 	}
 
-	override public function body(?maxByteSize:Int):haxe.io.Bytes
+	override public function _body(maxByteSize:Null<Int>):haxe.io.Bytes
 	{
 		var ret = Web.getPostData();
 		if (maxByteSize != null && ret.length > maxByteSize) throw mweb.Errors.RequestError.PostSizeTooBig(maxByteSize, ret.length);

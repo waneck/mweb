@@ -89,12 +89,21 @@ enum InternalError
 	InvalidFunction(value:Dynamic);
 }
 
+/**
+	Thrown by the type decoder
+ **/
 enum DecoderError
 {
+	/**
+		A type was referenced on the code and no decoder was added to handle it.
+	 **/
 	TypeNotFound(type:String);
 	DecoderNotFound(type:String);
 }
 
+/**
+	Thrown when a new request is processed
+ **/
 enum RequestError
 {
 	InvalidRequest(message:String);
@@ -108,9 +117,24 @@ enum RequestError
 enum ParseError
 {
 	/**
-		Thrown by FormEncoded when
+		Thrown by FormEncoded when a key is both referenced as an array and as an object.
+
+		Example (in the POST body):
+			a[b] = "somestring"
+			a[] = "otherstring"
+
+		In this case `a` is both referenced as an object (`a[b]`) and as an array(`a[]`) -
+		which leads to this error
 	 **/
 	ObjectArrayMismatch(key1:String, key2:String);
 
-	CustomParseError(msg:String);
+	/**
+		Thrown when an invalid content-type is set
+	 **/
+	InvalidMimeType(contentType:String);
+
+	/**
+		Custom Body Parser error
+	 **/
+	CustomParseError(kind:String, msg:String);
 }

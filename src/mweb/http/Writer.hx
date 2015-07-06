@@ -2,6 +2,17 @@ package mweb.http;
 
 @:abstract class Writer
 {
+	/**
+		The configuration object. Must be set by the constructor
+	 **/
+	public var config(default,null):mweb.Config;
+
+	private function new(?config:mweb.Config)
+	{
+		if (config == null) config = mweb.Config.defaultConfig;
+		this.config = config;
+	}
+
 	public function writeResponse<T>(resp:Response<T>):Void
 	{
 		var status = resp.status;

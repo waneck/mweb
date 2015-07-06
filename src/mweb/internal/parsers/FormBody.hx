@@ -37,7 +37,16 @@ class FormBody extends BodyParser
 	 **/
 	public var parameterLimit:Null<Int> = 1000;
 
-	override public function parseRequest(req:mweb.http.Request, ?maxByteSize:Int):{ }
+	/**
+		May contain a lower byte size limit than the one on `mweb.Config`
+	 **/
+	public var maxByteSize:Null<Int>;
+
+	public function new()
+	{
+	}
+
+	override public function parseRequest(req:mweb.http.Request):{ }
 	{
 		return switch(req.method())
 		{
@@ -48,13 +57,18 @@ class FormBody extends BodyParser
 		}
 	}
 
+	override public function mimeType()
+	{
+		return 'application/x-www-form-urlencoded';
+	}
+
 	public function parseForm(data:String):{ }
 	{
 		if (data == null || data.length == 0)
 			return {};
 
 		var numbers = ~/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/;
-		var prop = this.allowDots ? ~/\[([^\[\]]*)\]|\.([^\.\[]*)/ : ~/\[([^\[\]]*)\]|(\B\b)/,
+		var prop = this.allowDots ? ~/\[([^\[\]]*)\]|\.([^\.\[]*)/ : ~/\[([^\[\]]*)\]|(\B\b)/, /* \B\b is meant to make it always fail */
 		    tmpSort:Array<SortObject> = []; // the object used to sort the output
 
 		var count = 0;

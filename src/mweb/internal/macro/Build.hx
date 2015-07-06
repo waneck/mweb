@@ -84,23 +84,6 @@ class Build
 		var route = typeof( macro (null : mweb.Route<Dynamic>) );
 
 		Context.onGenerate(function(types) {
-			// for( t in types )
-			// 	switch( t )
-			// 	{
-			// 	case TInst(c, _) if (unify(t, route) && c.toString() != 'mweb.Route'):
-			// 		var c = c.get();
-			// 		if (!c.meta.has(':skip') && !c.meta.has('routeRtti'))
-			// 		{
-			// 			var s = new haxe.Serializer();
-			// 			s.useEnumIndex = true;
-			// 			// s.useCache = true;
-			// 			var data = dispatchDataType(t,c.meta.get(),c.pos,true).data;
-			// 			s.serialize(data);
-			// 			c.meta.add("routeRtti", [ { expr : EConst(CString(s.toString())), pos : c.pos } ], c.pos);
-			// 		}
-			// 	default:
-			// 	}
-
 			postProcess1(types);
 			postProcessAbstracts(types);
 			postProcessClasses(types);

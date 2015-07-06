@@ -9,8 +9,9 @@ import croxit.Web;
 
 class Writer extends mweb.http.Writer
 {
-	public function new()
+	public function new(?config:mweb.Config)
 	{
+		super(config);
 	}
 
 	override public function setHeader(key:String, value:String):Void

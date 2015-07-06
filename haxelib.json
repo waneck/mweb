@@ -1,0 +1,22 @@
+{
+	"name": "mweb",
+	"license": "MIT",
+	"classPath": "src",
+	"tags": [
+		"cross",
+		"neko",
+		"php",
+		"web"
+	],
+	"classPath": "src",
+	"description": "Minimal web framework",
+	"contributors": [
+		"waneck"
+	],
+	"releasenote": "First release: unstable",
+	"version": "0.1.0-alpha",
+	"url": "https://github.com/waneck/mweb",
+	"dependencies": {
+		"tink_core": "1.0.0-rc.11"
+	}
+}

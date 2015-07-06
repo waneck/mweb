@@ -4,6 +4,9 @@ import mweb.Errors;
 #end
 using StringTools;
 
+/**
+	Used to manage the conversion between JSON-like types to Haxe types
+ **/
 class Decoder
 {
 #if !macro
@@ -155,8 +158,9 @@ class Decoder
 		throw DecoderNotFound(typeName);
 	}
 #end
+
 	/**
-		Registers a custom decoder that will be used to decode 'T' types.
+		Registers a custom type decoder that will be used to decode 'T' types.
 		This function is type-checked and calling it will avoid the 'no Decoder was declared' warnings.
 		IMPORTANT: this function must be called before the first .dispatch() that uses the custom type is called
 	 **/

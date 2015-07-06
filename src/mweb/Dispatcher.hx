@@ -22,29 +22,29 @@ class Dispatcher<T>
 	private var routeStack:Array<Route<Dynamic>>;
 	private var metaHandlers:Array<Array<String>->Void>;
 	private var params:{ };
-	private var _getParams:Void->{};
+	private var lazyParams:tink.core.Lazy<{}>;
 
 	/**
-		Creates a new Dispatcher class from an `uri`, `method` and `getParameters` object.
+		Creates a new Dispatcher class from an `uri`, `method` and `lazyParameters` object.
 	 **/
-	public function new(method:Verb, uri:String, ?getParameters:Void->{})
+	public function new(method:Verb, uri:String, ?lazyParameters:tink.core.Lazy<{}>)
 	{
 		this.pieces = splitUri(uri);
 		this.verb = method;
-		this._getParams = getParameters;
+		this.lazyParams = lazyParameters;
 		this.routeStack = [];
 		this.metaHandlers = [];
 	}
 
-	public static function createWithRequest(req:mweb.http.Request)
+	public static function createWithRequest(request:mweb.http.Request)
 	{
-		return new Dispatcher(req.method(), req.uri(), function() return req.params());
+		return new Dispatcher(request.method(), request.uri(), function() return request.params());
 	}
 
 	private function getParams()
 	{
-		if (params == null && _getParams != null)
-			params = _getParams();
+		if (params == null && lazyParams != null)
+			params = lazyParams.get();
 		return params;
 	}
 
@@ -118,7 +118,7 @@ class Dispatcher<T>
 	}
 
 	/**
-		Dispatches the current HTTP request to the associated function that is specified to deal with thati through `route`
+		Dispatches the current HTTP request to the associated function that is specified to deal with that through `route`
 	 **/
 	public function dispatch(route:Route<T>):T
 	{
@@ -301,8 +301,6 @@ class Dispatcher<T>
 		return null;
 	}
 
-	// private static var decoders(get,null):Map<String,Decoder<Dynamic>>;
-
 	static private function buildArgs(args:Dynamic, arg:{ key:String, opt:Bool, type:CType }, err:DispatcherError):Dynamic
 	{
 		switch(arg.type)
@@ -369,7 +367,7 @@ class Dispatcher<T>
 	}
 
 	/**
-		Gets a route from the current dispatching Route.
+		Gets a subroute from the current dispatching Route hierarchy.
 	 **/
 	public function getRoute<T : Route<Dynamic>>(t:Class<T>):Null<T>
 	{

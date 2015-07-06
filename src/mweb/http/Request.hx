@@ -11,6 +11,17 @@ using StringTools;
 @:abstract class Request
 {
 	/**
+		The configuration object. Must be set by the constructor
+	 **/
+	public var config(default,null):mweb.Config;
+
+	private function new(?config:mweb.Config)
+	{
+		if (config == null) config = mweb.Config.defaultConfig;
+		this.config = config;
+	}
+
+	/**
 		Should return the method (verb) used by the request - values like GET/POST.
 
 		This implementation should support `X-HTTP-Method` header overrides
@@ -56,12 +67,32 @@ using StringTools;
 		Returns the body of the request.
 
 		If `maxByteSize` is specified, the size restriction *must* be enforced,
-		and if the POST size is bigger than `maxByteSize`, an exception of
-		type `mweb.Errors.RequestError.PostSizeTooBig` must be thrown.
+		and will only take into effect if it's lower than the restriction set by
+		`config.maxBodyByteSize`
 	 **/
 	@:abstract public function body(?maxByteSize:Int):haxe.io.Bytes
 	{
-		throw 'Not implemented';
+		if (maxByteSize != null)
+		{
+			if (config.maxBodyByteSize != null)
+				if (maxByteSize > config.maxBodyByteSize)
+					maxByteSize = config.maxBodyByteSize;
+		} else {
+			maxByteSize = config.maxBodyByteSize;
+		}
+		return _body(maxByteSize);
+	}
+
+	/**
+		Returns the body of the request.
+
+		If `maxByteSize` is specified, the size restriction *must* be enforced,
+		and if the POST size is bigger than `maxByteSize`, an exception of
+		type `mweb.Errors.RequestError.PostSizeTooBig` must be thrown.
+	 **/
+	private function _body(maxByteSize:Null<Int>):haxe.io.Bytes
+	{
+		throw 'Not Implemented';
 	}
 
 	/**
@@ -115,13 +146,20 @@ using StringTools;
 
 		If a custom parser is needed, one can use `customParser`
 	 **/
-	public function params(?maxByteSize:Int, ?customParser:mweb.internal.BodyParser):{ }
+	public function params(?customParser:mweb.internal.BodyParser):{ }
 	{
 		var parser = customParser;
 		if (parser == null)
-			parser = mweb.internal.BodyParser.cached;
+		{
+			parser = this.config.parserFromMime( this.contentType() );
+		}
 
-		return parser.parseRequest(this, maxByteSize);
+		if (parser == null)
+		{
+			throw mweb.Errors.ParseError.InvalidMimeType(this.contentType());
+		}
+
+		return parser.parseRequest(this);
 	}
 
 	/**

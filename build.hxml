@@ -2,6 +2,7 @@
 -cp test
 -main TestAll
 -lib utest
+-lib tink_core
 
 -D mweb_testing
 --interp

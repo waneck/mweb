@@ -1,5 +1,0 @@
-package mweb;
-
-class App
-{
-}
